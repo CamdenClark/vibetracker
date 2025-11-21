@@ -1,0 +1,17 @@
+{
+  "name": "vibetracker",
+  "version": "0.1.0",
+  "description": "Local tracker for AI coding assistants (Claude Code, Cursor, Gemini CLI, etc.)",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot ./index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
