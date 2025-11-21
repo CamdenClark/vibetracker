@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "CLI tool that hooks into Claude Code to capture conversation transcripts in SQLite",
   "type": "module",
+  "bin": {
+    "vibetracker": "./index.ts"
+  },
   "scripts": {
     "test": "bun test"
   },
