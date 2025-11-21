@@ -4,7 +4,7 @@ const command = process.argv[2];
 const subcommand = process.argv[3];
 
 if (command === "claude" && subcommand === "hook") {
-  const { handleClaudeHook } = await import("./src/claude-hook-v2.ts");
+  const { handleClaudeHook } = await import("./src/claude-hook.ts");
   await handleClaudeHook();
 } else if (command === "migrate") {
   const { default: migrate } = await import("./src/migrate.ts");

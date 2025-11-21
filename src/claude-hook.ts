@@ -1,55 +1,77 @@
-import { storeTranscript } from "./db.ts";
+import { readFileSync } from "fs";
+import { parseTranscriptFile } from "./parser";
+import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db-v2";
 
-interface HookInput {
+interface HookData {
   session_id: string;
   transcript_path: string;
+  event_name: "Stop" | "SubagentStop";
   permission_mode: string;
-  hook_event_name: "Stop" | "SubagentStop";
   stop_hook_active: boolean;
+  timestamp: string;
 }
 
-export async function claudeHook() {
+export async function handleClaudeHook(): Promise<void> {
   try {
-    // Read JSON from stdin
-    const input = await readStdin();
-    const hookData: HookInput = JSON.parse(input);
+    // Read hook data from stdin
+    const stdinData = await readStdin();
+    const hookData: HookData = JSON.parse(stdinData);
 
-    // Read the transcript file
-    const transcriptPath = expandPath(hookData.transcript_path);
-    const transcriptFile = Bun.file(transcriptPath);
-    const transcriptContent = await transcriptFile.text();
+    // Parse the transcript file
+    const parsed = parseTranscriptFile(hookData.transcript_path);
 
-    // Store in database
-    await storeTranscript({
-      sessionId: hookData.session_id,
-      transcriptPath: hookData.transcript_path,
-      transcriptContent,
-      eventName: hookData.hook_event_name,
-      permissionMode: hookData.permission_mode,
-      stopHookActive: hookData.stop_hook_active,
-      timestamp: new Date(),
-    });
+    // Store session
+    upsertSession(parsed.session);
 
-    // Allow normal termination - no output needed
+    // Store messages
+    const messageIdMap = new Map<string, number>();
+    for (const message of parsed.messages) {
+      const messageId = insertMessage(message);
+      messageIdMap.set(message.messageUuid, messageId);
+    }
+
+    // Store tool calls with correct message IDs
+    for (const toolCall of parsed.toolCalls) {
+      // Update message ID based on actual inserted message
+      const actualMessageId = messageIdMap.get(
+        parsed.messages.find(m => m.messageUuid === toolCall.toolUseId)?.messageUuid || ""
+      );
+      if (actualMessageId) {
+        toolCall.messageId = actualMessageId;
+      }
+      insertToolCall(toolCall);
+    }
+
+    // Store agents
+    for (const agent of parsed.agents) {
+      upsertAgent(agent);
+    }
+
+    console.error(`✓ Stored ${hookData.event_name} event for session ${hookData.session_id}`);
+    console.error(`  - ${parsed.messages.length} messages`);
+    console.error(`  - ${parsed.toolCalls.length} tool calls`);
+    console.error(`  - ${parsed.agents.length} agents`);
   } catch (error) {
-    // Log error to stderr but don't block Claude
-    console.error("Vibetracker error:", error);
-    // Exit successfully so we don't interfere with Claude
+    console.error("Error handling Claude hook:", error);
+    // Exit gracefully so we don't interfere with Claude
     process.exit(0);
   }
 }
 
 async function readStdin(): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of Bun.stdin.stream()) {
-    chunks.push(Buffer.from(chunk));
-  }
-  return Buffer.concat(chunks).toString("utf-8");
-}
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
 
-function expandPath(path: string): string {
-  if (path.startsWith("~/")) {
-    return path.replace("~", process.env.HOME || "");
-  }
-  return path;
+    process.stdin.on("data", (chunk) => {
+      chunks.push(chunk);
+    });
+
+    process.stdin.on("end", () => {
+      resolve(Buffer.concat(chunks).toString("utf-8"));
+    });
+
+    process.stdin.on("error", (error) => {
+      reject(error);
+    });
+  });
 }
