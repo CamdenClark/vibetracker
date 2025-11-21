@@ -1,10 +1,10 @@
 # Vibetracker
 
-A local tracking system for AI coding assistants like Claude Code, Cursor, Gemini CLI, and others.
+A CLI tool that hooks into Claude Code to capture conversation transcripts in a local SQLite database.
 
 ## What is Vibetracker?
 
-Vibetracker hooks into AI coding assistants to track conversations, tool calls, and interactions locally in a SQLite database. All data stays on your machine - privacy first.
+Vibetracker listens to Claude Code hook events (Stop, SubagentStop) and automatically stores conversation transcripts in SQLite. All data stays on your machine - privacy first.
 
 ## Quick Start
 
@@ -12,27 +12,21 @@ Vibetracker hooks into AI coding assistants to track conversations, tool calls, 
 # Install dependencies
 bun install
 
-# Run the server
-bun run dev
-
 # Run tests
 bun test
 ```
 
 ## Features (Planned)
 
-- 📊 Track AI assistant conversations and tool usage
-- 🗄️ Store data locally in SQLite
-- 🔌 Support for multiple AI assistants (Claude Code, Cursor, Gemini CLI)
-- 📈 Usage insights and analytics
+- 📊 Capture Claude Code conversation transcripts
+- 🗄️ Store transcripts locally in SQLite
+- 🪝 Hook into Stop and SubagentStop events
 - 🔒 Privacy-first: all data stays local
 
 ## Tech Stack
 
 - **Runtime**: Bun
 - **Database**: SQLite (bun:sqlite)
-- **API**: Bun.serve() with WebSocket support
-- **Frontend**: React with HTML imports
 
 ## Documentation
 

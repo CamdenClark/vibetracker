@@ -1,10 +1,9 @@
 {
   "name": "vibetracker",
   "version": "0.1.0",
-  "description": "Local tracker for AI coding assistants (Claude Code, Cursor, Gemini CLI, etc.)",
+  "description": "CLI tool that hooks into Claude Code to capture conversation transcripts in SQLite",
   "type": "module",
   "scripts": {
-    "dev": "bun --hot ./index.ts",
     "test": "bun test"
   },
   "dependencies": {},

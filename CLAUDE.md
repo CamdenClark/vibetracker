@@ -1,21 +1,18 @@
 # Vibetracker
 
-Vibetracker is a local tracking system for AI coding assistants like Claude Code, Cursor, Gemini CLI, and others. It hooks into these tools to track conversations, tool calls, and interactions locally in a SQLite database.
+Vibetracker is a CLI tool that hooks into Claude Code to capture and store conversation transcripts in a local SQLite database.
 
 ## Project Goals
 
-- Track AI assistant conversations and interactions locally
-- Store tool calls, prompts, and responses in SQLite
-- Provide insights into AI coding assistant usage patterns
-- Support multiple AI coding assistants (Claude Code, Cursor, Gemini CLI, etc.)
+- Listen for Claude Code hook events (Stop, SubagentStop)
+- Capture conversation transcripts automatically
+- Store transcripts in a local SQLite database
 - Privacy-first: all data stays local
 
 ## Tech Stack
 
 - **Runtime**: Bun
 - **Database**: SQLite (using `bun:sqlite`)
-- **API**: Bun.serve() with WebSocket support
-- **Frontend**: HTML imports with React
 - **Testing**: bun:test
 
 ## Setup
@@ -23,9 +20,6 @@ Vibetracker is a local tracking system for AI coding assistants like Claude Code
 ```bash
 # Install dependencies
 bun install
-
-# Run the server
-bun --hot ./index.ts
 
 # Run tests
 bun test
@@ -36,19 +30,17 @@ bun test
 ### Database Schema
 
 The SQLite database will track:
-- **Sessions**: Individual coding sessions with an AI assistant
-- **Conversations**: Individual conversations within sessions
-- **Messages**: User and assistant messages
-- **Tool Calls**: Tools invoked by the assistant (file reads, edits, bash commands, etc.)
-- **Metadata**: Assistant type, model, timestamps, etc.
+- **Transcripts**: Complete conversation transcripts
+- **Events**: Hook event data (Stop, SubagentStop)
+- **Metadata**: Timestamps, session info, etc.
 
 ### Hook Integration
 
-Vibetracker will integrate with AI assistants through:
-- Environment variable hooks
-- Configuration file hooks
-- API interception (where supported)
-- Log file parsing (fallback method)
+Vibetracker integrates with Claude Code through hooks:
+- Listens for `Stop` events (main conversation ends)
+- Listens for `SubagentStop` events (subagent/task completion)
+- Captures transcript data from hook payloads
+- Stores in SQLite for later analysis
 
 ## Development
 
