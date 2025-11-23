@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
-import { join } from "path";
+import { join, dirname } from "path";
 import { mkdirSync, existsSync } from "fs";
 
-const DB_PATH = join(process.env.HOME || "", ".vibetracker", "transcripts.db");
+const DEFAULT_DB_PATH = join(process.env.HOME || "", ".vibetracker", "transcripts.db");
 
 export interface SessionData {
   sessionId: string;
@@ -67,14 +67,16 @@ export interface AgentData {
   providerMetadata?: Record<string, any>;
 }
 
-function getDb(): Database {
+function getDb(dbPath?: string): Database {
+  const resolvedPath = dbPath || DEFAULT_DB_PATH;
+
   // Ensure directory exists
-  const dbDir = join(process.env.HOME || "", ".vibetracker");
+  const dbDir = dirname(resolvedPath);
   if (!existsSync(dbDir)) {
     mkdirSync(dbDir, { recursive: true });
   }
 
-  const db = new Database(DB_PATH);
+  const db = new Database(resolvedPath);
 
   // Enable foreign keys
   db.run("PRAGMA foreign_keys = ON");
@@ -192,8 +194,8 @@ function createTables(db: Database): void {
   db.run(`CREATE INDEX IF NOT EXISTS idx_agents_type ON agents(subagent_type)`);
 }
 
-export function upsertSession(data: SessionData): void {
-  const db = getDb();
+export function upsertSession(data: SessionData, dbPath?: string): void {
+  const db = getDb(dbPath);
 
   const stmt = db.prepare(`
     INSERT INTO sessions (session_id, provider, project_path, git_branch, started_at, last_activity_at, model_provider, provider_metadata)
@@ -222,8 +224,8 @@ export function upsertSession(data: SessionData): void {
   db.close();
 }
 
-export function insertMessage(data: MessageData): number {
-  const db = getDb();
+export function insertMessage(data: MessageData, dbPath?: string): number {
+  const db = getDb(dbPath);
 
   const stmt = db.prepare(`
     INSERT INTO messages (
@@ -264,8 +266,8 @@ export function insertMessage(data: MessageData): number {
   return messageId;
 }
 
-export function insertToolCall(data: ToolCallData): void {
-  const db = getDb();
+export function insertToolCall(data: ToolCallData, dbPath?: string): void {
+  const db = getDb(dbPath);
 
   const stmt = db.prepare(`
     INSERT INTO tool_calls (
@@ -293,8 +295,8 @@ export function insertToolCall(data: ToolCallData): void {
   db.close();
 }
 
-export function upsertAgent(data: AgentData): void {
-  const db = getDb();
+export function upsertAgent(data: AgentData, dbPath?: string): void {
+  const db = getDb(dbPath);
 
   const stmt = db.prepare(`
     INSERT INTO agents (
