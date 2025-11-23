@@ -77,7 +77,37 @@ This will automatically capture all Codex sessions to your vibetracker database.
 
 ## Usage
 
-Transcripts are stored in `~/.vibetracker/transcripts.db`.
+Transcripts are stored in `~/.vibetracker/transcripts.db` by default.
+
+### Custom Database Path
+
+You can specify a custom database path using the `--db-path` flag:
+
+```bash
+# For Claude Code hooks (in ~/.claude/config.json)
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "vibetracker claude hook --db-path /custom/path/to/db.sqlite"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+# For Codex CLI (in ~/.codex/config.toml)
+notify = "vibetracker codex notify --db-path /custom/path/to/db.sqlite"
+```
+
+This is useful for:
+- Storing databases in cloud-synced folders
+- Project-specific tracking
+- Organizing multiple database instances
 
 ### Query Examples
 

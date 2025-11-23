@@ -11,7 +11,7 @@ interface CodexNotification {
   "last-assistant-message": string;
 }
 
-export async function handleCodexNotify(): Promise<void> {
+export async function handleCodexNotify(dbPath?: string): Promise<void> {
   try {
     // Codex passes notification as JSON string argument
     const notificationJson = process.argv[4];
@@ -75,12 +75,12 @@ export async function handleCodexNotify(): Promise<void> {
     const parsed = parseTranscriptFile(transcriptPath);
 
     // Store session
-    upsertSession(parsed.session);
+    upsertSession(parsed.session, dbPath);
 
     // Store messages
     const messageIdMap = new Map<string, number>();
     for (const message of parsed.messages) {
-      const messageId = insertMessage(message);
+      const messageId = insertMessage(message, dbPath);
       messageIdMap.set(message.messageUuid, messageId);
     }
 
@@ -93,12 +93,12 @@ export async function handleCodexNotify(): Promise<void> {
       if (actualMessageId) {
         toolCall.messageId = actualMessageId;
       }
-      insertToolCall(toolCall);
+      insertToolCall(toolCall, dbPath);
     }
 
     // Store agents
     for (const agent of parsed.agents) {
-      upsertAgent(agent);
+      upsertAgent(agent, dbPath);
     }
 
     console.error(`✓ Stored Codex turn-complete for thread ${notification["thread-id"]}`);
