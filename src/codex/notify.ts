@@ -1,5 +1,5 @@
-import { parseCodexTranscript } from "../parsers/codex-transcript";
-import { saveTranscript } from "../db";
+import { parseCodexTranscript } from "./transcript";
+import { saveTranscript } from "../shared/db";
 import { join } from "path";
 
 interface CodexNotification {

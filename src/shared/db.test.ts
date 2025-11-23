@@ -5,7 +5,7 @@ import { unlinkSync, existsSync, rmdirSync } from "fs";
 import { join } from "path";
 import { Database } from "bun:sqlite";
 
-const TEST_DB_PATH = join(import.meta.dir, "..", "test-vibetracker.db");
+const TEST_DB_PATH = join(import.meta.dir, "..", "..", "test-vibetracker.db");
 
 beforeEach(() => {
   // Clean up any existing test database
@@ -159,7 +159,7 @@ test("should handle agents with custom database path", () => {
 });
 
 test("should create nested directory structure for custom path", () => {
-  const nestedPath = join(import.meta.dir, "..", "test-dir", "nested", "db.sqlite");
+  const nestedPath = join(import.meta.dir, "..", "..", "test-dir", "nested", "db.sqlite");
 
   const sessionData: SessionData = {
     sessionId: "test-session-nested",
@@ -174,8 +174,8 @@ test("should create nested directory structure for custom path", () => {
 
   // Clean up
   unlinkSync(nestedPath);
-  rmdirSync(join(import.meta.dir, "..", "test-dir", "nested"));
-  rmdirSync(join(import.meta.dir, "..", "test-dir"));
+  rmdirSync(join(import.meta.dir, "..", "..", "test-dir", "nested"));
+  rmdirSync(join(import.meta.dir, "..", "..", "test-dir"));
 });
 
 test("should save complete transcript in single transaction", () => {

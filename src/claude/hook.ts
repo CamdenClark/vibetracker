@@ -1,5 +1,5 @@
-import { parseClaudeTranscript } from "../parsers/claude-transcript";
-import { saveTranscript } from "../db";
+import { parseClaudeTranscript } from "./transcript";
+import { saveTranscript } from "../shared/db";
 
 interface HookData {
   session_id: string;

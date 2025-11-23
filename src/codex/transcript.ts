@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
-import type { ParsedTranscript } from "../types";
-import type { MessageData, ToolCallData, AgentData } from "../db";
+import type { ParsedTranscript } from "../shared/types";
+import type { MessageData, ToolCallData, AgentData } from "../shared/db";
 
 interface CodexEvent {
   timestamp: string;
