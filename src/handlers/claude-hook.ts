@@ -1,5 +1,5 @@
-import { parseTranscriptFile } from "./parser";
-import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db";
+import { parseClaudeTranscript } from "../parsers/claude-transcript";
+import { saveTranscript } from "../db";
 
 interface HookData {
   session_id: string;
@@ -17,34 +17,10 @@ export async function handleClaudeHook(dbPath?: string): Promise<void> {
     const hookData: HookData = JSON.parse(stdinData);
 
     // Parse the transcript file
-    const parsed = parseTranscriptFile(hookData.transcript_path);
+    const parsed = parseClaudeTranscript(hookData.transcript_path);
 
-    // Store session
-    upsertSession(parsed.session, dbPath);
-
-    // Store messages
-    const messageIdMap = new Map<string, number>();
-    for (const message of parsed.messages) {
-      const messageId = insertMessage(message, dbPath);
-      messageIdMap.set(message.messageUuid, messageId);
-    }
-
-    // Store tool calls with correct message IDs
-    for (const toolCall of parsed.toolCalls) {
-      // Update message ID based on actual inserted message
-      const actualMessageId = messageIdMap.get(
-        parsed.messages.find(m => m.messageUuid === toolCall.toolUseId)?.messageUuid || ""
-      );
-      if (actualMessageId) {
-        toolCall.messageId = actualMessageId;
-      }
-      insertToolCall(toolCall, dbPath);
-    }
-
-    // Store agents
-    for (const agent of parsed.agents) {
-      upsertAgent(agent, dbPath);
-    }
+    // Save to database in a single transaction
+    saveTranscript(parsed, dbPath);
 
     console.error(`✓ Stored ${hookData.event_name} event for session ${hookData.session_id}`);
     console.error(`  - ${parsed.messages.length} messages`);

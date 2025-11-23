@@ -331,3 +331,185 @@ export function upsertAgent(data: AgentData, dbPath?: string): void {
 
   db.close();
 }
+
+/**
+ * Save a complete parsed transcript in a single transaction
+ * This is more efficient than calling individual insert functions
+ */
+export function saveTranscript(
+  transcript: {
+    session: SessionData;
+    messages: MessageData[];
+    toolCalls: ToolCallData[];
+    agents: AgentData[];
+  },
+  dbPath?: string
+): void {
+  const db = getDb(dbPath);
+
+  try {
+    // Begin transaction
+    db.run("BEGIN TRANSACTION");
+
+    // Prepare statements
+    const sessionStmt = db.prepare(`
+      INSERT INTO sessions (session_id, provider, project_path, git_branch, started_at, last_activity_at, model_provider, provider_metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(session_id) DO UPDATE SET
+        provider = COALESCE(excluded.provider, provider),
+        project_path = COALESCE(excluded.project_path, project_path),
+        git_branch = COALESCE(excluded.git_branch, git_branch),
+        started_at = COALESCE(excluded.started_at, started_at),
+        last_activity_at = COALESCE(excluded.last_activity_at, last_activity_at),
+        model_provider = COALESCE(excluded.model_provider, model_provider),
+        provider_metadata = COALESCE(excluded.provider_metadata, provider_metadata)
+    `);
+
+    const messageStmt = db.prepare(`
+      INSERT INTO messages (
+        session_id, provider, message_uuid, parent_uuid, role, content, model, stop_reason,
+        is_sidechain, agent_id, timestamp,
+        input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, reasoning_tokens,
+        provider_metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(message_uuid) DO NOTHING
+    `);
+
+    const toolCallStmt = db.prepare(`
+      INSERT INTO tool_calls (
+        message_id, session_id, provider, agent_id, tool_use_id, tool_name,
+        tool_input, tool_result, is_error, duration_ms, timestamp, provider_metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(tool_use_id) DO NOTHING
+    `);
+
+    const agentStmt = db.prepare(`
+      INSERT INTO agents (
+        agent_id, session_id, provider, parent_message_uuid, subagent_type, prompt, status, model,
+        total_duration_ms, total_tokens, total_tool_calls, started_at, completed_at, provider_metadata
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(agent_id) DO UPDATE SET
+        status = COALESCE(excluded.status, status),
+        total_duration_ms = COALESCE(excluded.total_duration_ms, total_duration_ms),
+        total_tokens = COALESCE(excluded.total_tokens, total_tokens),
+        total_tool_calls = COALESCE(excluded.total_tool_calls, total_tool_calls),
+        completed_at = COALESCE(excluded.completed_at, completed_at),
+        provider_metadata = COALESCE(excluded.provider_metadata, provider_metadata)
+    `);
+
+    // Insert session
+    sessionStmt.run(
+      transcript.session.sessionId,
+      transcript.session.provider,
+      transcript.session.projectPath || null,
+      transcript.session.gitBranch || null,
+      transcript.session.startedAt?.toISOString() || null,
+      transcript.session.lastActivityAt?.toISOString() || null,
+      transcript.session.modelProvider || null,
+      transcript.session.providerMetadata ? JSON.stringify(transcript.session.providerMetadata) : null
+    );
+
+    // Insert messages and build messageIdMap (UUID -> DB ID)
+    const messageUuidToDbId = new Map<string, number>();
+    for (const message of transcript.messages) {
+      messageStmt.run(
+        message.sessionId,
+        message.provider,
+        message.messageUuid,
+        message.parentUuid || null,
+        message.role,
+        message.content,
+        message.model || null,
+        message.stopReason || null,
+        message.isSidechain ? 1 : 0,
+        message.agentId || null,
+        message.timestamp.toISOString(),
+        message.inputTokens || null,
+        message.outputTokens || null,
+        message.cacheReadTokens || null,
+        message.cacheCreationTokens || null,
+        message.reasoningTokens || null,
+        message.providerMetadata ? JSON.stringify(message.providerMetadata) : null
+      );
+
+      // Get the database ID for this message
+      const result = db.query(`SELECT id FROM messages WHERE message_uuid = ?`).get(message.messageUuid) as { id: number } | null;
+      if (result) {
+        messageUuidToDbId.set(message.messageUuid, result.id);
+      }
+    }
+
+    // Insert tool calls
+    // The parsers create tool calls with a messageId based on a sequential counter
+    // We need to map that to the actual database ID using the message UUID
+    // Build a reverse map: sequential index -> message UUID
+    const indexToUuid = new Map<number, string>();
+    transcript.messages.forEach((msg, index) => {
+      indexToUuid.set(index + 1, msg.messageUuid); // parsers use 1-based counter
+    });
+
+    for (const toolCall of transcript.toolCalls) {
+      // Get the actual database message ID
+      // First, try to find which message this tool belongs to by its messageId field
+      let dbMessageId: number | undefined;
+
+      if (toolCall.messageId && toolCall.messageId > 0) {
+        // The messageId from the parser is a sequential counter
+        // Map it to the message UUID, then to the database ID
+        const messageUuid = indexToUuid.get(toolCall.messageId);
+        if (messageUuid) {
+          dbMessageId = messageUuidToDbId.get(messageUuid);
+        }
+      }
+
+      if (!dbMessageId) {
+        console.error(`Warning: Could not find database message ID for tool call ${toolCall.toolUseId}, skipping`);
+        continue;
+      }
+
+      toolCallStmt.run(
+        dbMessageId,
+        toolCall.sessionId,
+        toolCall.provider,
+        toolCall.agentId || null,
+        toolCall.toolUseId,
+        toolCall.toolName,
+        toolCall.toolInput,
+        toolCall.toolResult || null,
+        toolCall.isError ? 1 : 0,
+        toolCall.durationMs || null,
+        toolCall.timestamp.toISOString(),
+        toolCall.providerMetadata ? JSON.stringify(toolCall.providerMetadata) : null
+      );
+    }
+
+    // Insert agents
+    for (const agent of transcript.agents) {
+      agentStmt.run(
+        agent.agentId,
+        agent.sessionId,
+        agent.provider,
+        agent.parentMessageUuid || null,
+        agent.subagentType || null,
+        agent.prompt || null,
+        agent.status || null,
+        agent.model || null,
+        agent.totalDurationMs || null,
+        agent.totalTokens || null,
+        agent.totalToolCalls || null,
+        agent.startedAt?.toISOString() || null,
+        agent.completedAt?.toISOString() || null,
+        agent.providerMetadata ? JSON.stringify(agent.providerMetadata) : null
+      );
+    }
+
+    // Commit transaction
+    db.run("COMMIT");
+  } catch (error) {
+    // Rollback on error
+    db.run("ROLLBACK");
+    throw error;
+  } finally {
+    db.close();
+  }
+}

@@ -1,5 +1,5 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
-import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db";
+import { upsertSession, insertMessage, insertToolCall, upsertAgent, saveTranscript } from "./db";
 import type { SessionData, MessageData, ToolCallData, AgentData } from "./db";
 import { unlinkSync, existsSync, rmdirSync } from "fs";
 import { join } from "path";
@@ -176,4 +176,78 @@ test("should create nested directory structure for custom path", () => {
   unlinkSync(nestedPath);
   rmdirSync(join(import.meta.dir, "..", "test-dir", "nested"));
   rmdirSync(join(import.meta.dir, "..", "test-dir"));
+});
+
+test("should save complete transcript in single transaction", () => {
+  const transcript = {
+    session: {
+      sessionId: "test-session-transcript",
+      provider: "claude_code",
+      projectPath: "/test/project",
+      gitBranch: "main",
+      startedAt: new Date(),
+      lastActivityAt: new Date(),
+      modelProvider: "anthropic",
+    },
+    messages: [
+      {
+        sessionId: "test-session-transcript",
+        provider: "claude_code",
+        messageUuid: "msg-1",
+        role: "user" as const,
+        content: "Hello",
+        isSidechain: false,
+        timestamp: new Date(),
+      },
+      {
+        sessionId: "test-session-transcript",
+        provider: "claude_code",
+        messageUuid: "msg-2",
+        role: "assistant" as const,
+        content: "Hi there!",
+        isSidechain: false,
+        timestamp: new Date(),
+        inputTokens: 10,
+        outputTokens: 5,
+      },
+    ],
+    toolCalls: [
+      {
+        messageId: 2, // Sequential ID corresponding to the 2nd message (assistant)
+        sessionId: "test-session-transcript",
+        provider: "claude_code",
+        toolUseId: "tool-1",
+        toolName: "Read",
+        toolInput: '{"file_path": "test.ts"}',
+        isError: false,
+        timestamp: new Date(),
+      },
+    ],
+    agents: [
+      {
+        agentId: "agent-1",
+        sessionId: "test-session-transcript",
+        provider: "claude_code",
+        subagentType: "Explore",
+        status: "completed",
+        totalTokens: 100,
+      },
+    ],
+  };
+
+  // Save entire transcript
+  saveTranscript(transcript, TEST_DB_PATH);
+
+  // Verify all data was saved
+  const db = new Database(TEST_DB_PATH);
+  const session = db.query("SELECT * FROM sessions WHERE session_id = ?").get("test-session-transcript");
+  const messages = db.query("SELECT * FROM messages WHERE session_id = ?").all("test-session-transcript");
+  const toolCalls = db.query("SELECT * FROM tool_calls WHERE session_id = ?").all("test-session-transcript");
+  const agents = db.query("SELECT * FROM agents WHERE session_id = ?").all("test-session-transcript");
+  db.close();
+
+  expect(session).toBeTruthy();
+  expect(messages.length).toBe(2);
+  expect(toolCalls.length).toBe(1);
+  expect(agents.length).toBe(1);
 });
