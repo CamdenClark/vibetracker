@@ -6,14 +6,18 @@ const DB_PATH = join(process.env.HOME || "", ".vibetracker", "transcripts.db");
 
 export interface SessionData {
   sessionId: string;
+  provider: string;
   projectPath?: string;
   gitBranch?: string;
   startedAt?: Date;
   lastActivityAt?: Date;
+  modelProvider?: string;
+  providerMetadata?: Record<string, any>;
 }
 
 export interface MessageData {
   sessionId: string;
+  provider: string;
   messageUuid: string;
   parentUuid?: string;
   role: "user" | "assistant";
@@ -27,11 +31,14 @@ export interface MessageData {
   outputTokens?: number;
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
+  reasoningTokens?: number;
+  providerMetadata?: Record<string, any>;
 }
 
 export interface ToolCallData {
   messageId: number;
   sessionId: string;
+  provider: string;
   agentId?: string;
   toolUseId: string;
   toolName: string;
@@ -40,11 +47,13 @@ export interface ToolCallData {
   isError: boolean;
   durationMs?: number;
   timestamp: Date;
+  providerMetadata?: Record<string, any>;
 }
 
 export interface AgentData {
   agentId: string;
   sessionId: string;
+  provider: string;
   parentMessageUuid?: string;
   subagentType?: string;
   prompt?: string;
@@ -55,6 +64,7 @@ export interface AgentData {
   totalToolCalls?: number;
   startedAt?: Date;
   completedAt?: Date;
+  providerMetadata?: Record<string, any>;
 }
 
 function getDb(): Database {
@@ -176,21 +186,27 @@ export function upsertSession(data: SessionData): void {
   const db = getDb();
 
   const stmt = db.prepare(`
-    INSERT INTO sessions (session_id, project_path, git_branch, started_at, last_activity_at)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO sessions (session_id, provider, project_path, git_branch, started_at, last_activity_at, model_provider, provider_metadata)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(session_id) DO UPDATE SET
+      provider = COALESCE(excluded.provider, provider),
       project_path = COALESCE(excluded.project_path, project_path),
       git_branch = COALESCE(excluded.git_branch, git_branch),
       started_at = COALESCE(excluded.started_at, started_at),
-      last_activity_at = COALESCE(excluded.last_activity_at, last_activity_at)
+      last_activity_at = COALESCE(excluded.last_activity_at, last_activity_at),
+      model_provider = COALESCE(excluded.model_provider, model_provider),
+      provider_metadata = COALESCE(excluded.provider_metadata, provider_metadata)
   `);
 
   stmt.run(
     data.sessionId,
+    data.provider,
     data.projectPath || null,
     data.gitBranch || null,
     data.startedAt?.toISOString() || null,
-    data.lastActivityAt?.toISOString() || null
+    data.lastActivityAt?.toISOString() || null,
+    data.modelProvider || null,
+    data.providerMetadata ? JSON.stringify(data.providerMetadata) : null
   );
 
   db.close();
@@ -201,15 +217,17 @@ export function insertMessage(data: MessageData): number {
 
   const stmt = db.prepare(`
     INSERT INTO messages (
-      session_id, message_uuid, parent_uuid, role, content, model, stop_reason,
+      session_id, provider, message_uuid, parent_uuid, role, content, model, stop_reason,
       is_sidechain, agent_id, timestamp,
-      input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, reasoning_tokens,
+      provider_metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(message_uuid) DO NOTHING
   `);
 
   stmt.run(
     data.sessionId,
+    data.provider,
     data.messageUuid,
     data.parentUuid || null,
     data.role,
@@ -222,7 +240,9 @@ export function insertMessage(data: MessageData): number {
     data.inputTokens || null,
     data.outputTokens || null,
     data.cacheReadTokens || null,
-    data.cacheCreationTokens || null
+    data.cacheCreationTokens || null,
+    data.reasoningTokens || null,
+    data.providerMetadata ? JSON.stringify(data.providerMetadata) : null
   );
 
   // Get the message ID
@@ -239,15 +259,16 @@ export function insertToolCall(data: ToolCallData): void {
 
   const stmt = db.prepare(`
     INSERT INTO tool_calls (
-      message_id, session_id, agent_id, tool_use_id, tool_name,
-      tool_input, tool_result, is_error, duration_ms, timestamp
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      message_id, session_id, provider, agent_id, tool_use_id, tool_name,
+      tool_input, tool_result, is_error, duration_ms, timestamp, provider_metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(tool_use_id) DO NOTHING
   `);
 
   stmt.run(
     data.messageId,
     data.sessionId,
+    data.provider,
     data.agentId || null,
     data.toolUseId,
     data.toolName,
@@ -255,7 +276,8 @@ export function insertToolCall(data: ToolCallData): void {
     data.toolResult || null,
     data.isError ? 1 : 0,
     data.durationMs || null,
-    data.timestamp.toISOString()
+    data.timestamp.toISOString(),
+    data.providerMetadata ? JSON.stringify(data.providerMetadata) : null
   );
 
   db.close();
@@ -266,20 +288,22 @@ export function upsertAgent(data: AgentData): void {
 
   const stmt = db.prepare(`
     INSERT INTO agents (
-      agent_id, session_id, parent_message_uuid, subagent_type, prompt, status, model,
-      total_duration_ms, total_tokens, total_tool_calls, started_at, completed_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      agent_id, session_id, provider, parent_message_uuid, subagent_type, prompt, status, model,
+      total_duration_ms, total_tokens, total_tool_calls, started_at, completed_at, provider_metadata
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(agent_id) DO UPDATE SET
       status = COALESCE(excluded.status, status),
       total_duration_ms = COALESCE(excluded.total_duration_ms, total_duration_ms),
       total_tokens = COALESCE(excluded.total_tokens, total_tokens),
       total_tool_calls = COALESCE(excluded.total_tool_calls, total_tool_calls),
-      completed_at = COALESCE(excluded.completed_at, completed_at)
+      completed_at = COALESCE(excluded.completed_at, completed_at),
+      provider_metadata = COALESCE(excluded.provider_metadata, provider_metadata)
   `);
 
   stmt.run(
     data.agentId,
     data.sessionId,
+    data.provider,
     data.parentMessageUuid || null,
     data.subagentType || null,
     data.prompt || null,
@@ -289,7 +313,8 @@ export function upsertAgent(data: AgentData): void {
     data.totalTokens || null,
     data.totalToolCalls || null,
     data.startedAt?.toISOString() || null,
-    data.completedAt?.toISOString() || null
+    data.completedAt?.toISOString() || null,
+    data.providerMetadata ? JSON.stringify(data.providerMetadata) : null
   );
 
   db.close();

@@ -1,6 +1,5 @@
-import { readFileSync } from "fs";
 import { parseTranscriptFile } from "./parser";
-import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db-v2";
+import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db";
 
 interface HookData {
   session_id: string;
