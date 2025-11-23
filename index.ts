@@ -11,10 +11,10 @@ if (dbPathIndex !== -1 && process.argv[dbPathIndex + 1]) {
 }
 
 if (command === "claude" && subcommand === "hook") {
-  const { handleClaudeHook } = await import("./src/handlers/claude-hook.ts");
+  const { handleClaudeHook } = await import("./src/claude/hook.ts");
   await handleClaudeHook(dbPath);
 } else if (command === "codex" && subcommand === "notify") {
-  const { handleCodexNotify } = await import("./src/handlers/codex-notify.ts");
+  const { handleCodexNotify } = await import("./src/codex/notify.ts");
   await handleCodexNotify(dbPath);
 } else {
   console.error("Usage:");
