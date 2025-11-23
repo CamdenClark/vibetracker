@@ -1,5 +1,5 @@
-import { parseTranscriptFile } from "./parser";
-import { upsertSession, insertMessage, insertToolCall, upsertAgent } from "./db";
+import { parseCodexTranscript } from "../parsers/codex-transcript";
+import { saveTranscript } from "../db";
 import { join } from "path";
 
 interface CodexNotification {
@@ -72,34 +72,10 @@ export async function handleCodexNotify(dbPath?: string): Promise<void> {
     }
 
     // Parse the transcript file
-    const parsed = parseTranscriptFile(transcriptPath);
+    const parsed = parseCodexTranscript(transcriptPath);
 
-    // Store session
-    upsertSession(parsed.session, dbPath);
-
-    // Store messages
-    const messageIdMap = new Map<string, number>();
-    for (const message of parsed.messages) {
-      const messageId = insertMessage(message, dbPath);
-      messageIdMap.set(message.messageUuid, messageId);
-    }
-
-    // Store tool calls with correct message IDs
-    for (const toolCall of parsed.toolCalls) {
-      // Update message ID based on actual inserted message
-      const actualMessageId = messageIdMap.get(
-        parsed.messages.find(m => m.messageUuid === toolCall.toolUseId)?.messageUuid || ""
-      );
-      if (actualMessageId) {
-        toolCall.messageId = actualMessageId;
-      }
-      insertToolCall(toolCall, dbPath);
-    }
-
-    // Store agents
-    for (const agent of parsed.agents) {
-      upsertAgent(agent, dbPath);
-    }
+    // Save to database in a single transaction
+    saveTranscript(parsed, dbPath);
 
     console.error(`✓ Stored Codex turn-complete for thread ${notification["thread-id"]}`);
     console.error(`  - ${parsed.messages.length} messages`);
