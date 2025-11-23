@@ -61,11 +61,19 @@ Add vibetracker to your Claude Code hooks configuration (`~/.claude/config.json`
 
 ### Codex CLI
 
-Support for Codex CLI is built-in. You can manually import Codex session files:
+Configure Codex to call vibetracker on agent turn completion by setting the `notify` option:
 
 ```bash
-vibetracker import ~/.codex/sessions/2025/11/22/*.jsonl
+codex --notify "vibetracker codex notify" "Your task here"
 ```
+
+Or set it in your Codex configuration file (`~/.codex/config.toml`):
+
+```toml
+notify = "vibetracker codex notify"
+```
+
+This will automatically capture all Codex sessions to your vibetracker database.
 
 ## Usage
 

@@ -90,10 +90,13 @@ function createTables(db: Database): void {
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT UNIQUE NOT NULL,
+      provider TEXT NOT NULL,
       project_path TEXT,
       git_branch TEXT,
       started_at TIMESTAMP,
       last_activity_at TIMESTAMP,
+      model_provider TEXT,
+      provider_metadata TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -104,6 +107,7 @@ function createTables(db: Database): void {
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
       message_uuid TEXT UNIQUE NOT NULL,
       parent_uuid TEXT,
       role TEXT NOT NULL,
@@ -119,6 +123,8 @@ function createTables(db: Database): void {
       output_tokens INTEGER,
       cache_read_tokens INTEGER,
       cache_creation_tokens INTEGER,
+      reasoning_tokens INTEGER,
+      provider_metadata TEXT,
 
       FOREIGN KEY (session_id) REFERENCES sessions(session_id)
     )
@@ -135,6 +141,7 @@ function createTables(db: Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       message_id INTEGER NOT NULL,
       session_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
       agent_id TEXT,
       tool_use_id TEXT UNIQUE NOT NULL,
       tool_name TEXT NOT NULL,
@@ -143,6 +150,7 @@ function createTables(db: Database): void {
       is_error INTEGER DEFAULT 0,
       duration_ms INTEGER,
       timestamp TIMESTAMP,
+      provider_metadata TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
       FOREIGN KEY (message_id) REFERENCES messages(id),
@@ -160,6 +168,7 @@ function createTables(db: Database): void {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       agent_id TEXT UNIQUE NOT NULL,
       session_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
       parent_message_uuid TEXT,
       subagent_type TEXT,
       prompt TEXT,
@@ -172,6 +181,7 @@ function createTables(db: Database): void {
 
       started_at TIMESTAMP,
       completed_at TIMESTAMP,
+      provider_metadata TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
       FOREIGN KEY (session_id) REFERENCES sessions(session_id)
