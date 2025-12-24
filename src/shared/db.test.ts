@@ -1,7 +1,13 @@
 import { test, expect, beforeEach, afterEach } from "bun:test";
-import { upsertSession, insertMessage, insertToolCall, upsertAgent, saveTranscript } from "./db";
+import {
+  upsertSession,
+  insertMessage,
+  insertToolCall,
+  upsertAgent,
+  saveTranscript,
+} from "./db";
 import type { SessionData, MessageData, ToolCallData, AgentData } from "./db";
-import { unlinkSync, existsSync, rmdirSync } from "fs";
+import { unlinkSync, existsSync, rmdirSync, rmSync } from "fs";
 import { join } from "path";
 import { Database } from "bun:sqlite";
 
@@ -80,8 +86,12 @@ test("should store and retrieve data with custom database path", () => {
 
   // Query the database to verify the data was stored
   const db = new Database(TEST_DB_PATH);
-  const session = db.query("SELECT * FROM sessions WHERE session_id = ?").get("test-session-retrieve");
-  const message = db.query("SELECT * FROM messages WHERE message_uuid = ?").get("msg-123");
+  const session = db
+    .query("SELECT * FROM sessions WHERE session_id = ?")
+    .get("test-session-retrieve");
+  const message = db
+    .query("SELECT * FROM messages WHERE message_uuid = ?")
+    .get("msg-123");
   db.close();
 
   expect(session).toBeTruthy();
@@ -124,7 +134,9 @@ test("should handle tool calls with custom database path", () => {
 
   // Verify
   const db = new Database(TEST_DB_PATH);
-  const toolCall = db.query("SELECT * FROM tool_calls WHERE tool_use_id = ?").get("tool-789");
+  const toolCall = db
+    .query("SELECT * FROM tool_calls WHERE tool_use_id = ?")
+    .get("tool-789");
   db.close();
 
   expect(toolCall).toBeTruthy();
@@ -152,14 +164,23 @@ test("should handle agents with custom database path", () => {
 
   // Verify
   const db = new Database(TEST_DB_PATH);
-  const agent = db.query("SELECT * FROM agents WHERE agent_id = ?").get("agent-001");
+  const agent = db
+    .query("SELECT * FROM agents WHERE agent_id = ?")
+    .get("agent-001");
   db.close();
 
   expect(agent).toBeTruthy();
 });
 
 test("should create nested directory structure for custom path", () => {
-  const nestedPath = join(import.meta.dir, "..", "..", "test-dir", "nested", "db.sqlite");
+  const nestedPath = join(
+    import.meta.dir,
+    "..",
+    "..",
+    "test-dir",
+    "nested",
+    "db.sqlite"
+  );
 
   const sessionData: SessionData = {
     sessionId: "test-session-nested",
@@ -240,14 +261,48 @@ test("should save complete transcript in single transaction", () => {
 
   // Verify all data was saved
   const db = new Database(TEST_DB_PATH);
-  const session = db.query("SELECT * FROM sessions WHERE session_id = ?").get("test-session-transcript");
-  const messages = db.query("SELECT * FROM messages WHERE session_id = ?").all("test-session-transcript");
-  const toolCalls = db.query("SELECT * FROM tool_calls WHERE session_id = ?").all("test-session-transcript");
-  const agents = db.query("SELECT * FROM agents WHERE session_id = ?").all("test-session-transcript");
+  const session = db
+    .query("SELECT * FROM sessions WHERE session_id = ?")
+    .get("test-session-transcript");
+  const messages = db
+    .query("SELECT * FROM messages WHERE session_id = ?")
+    .all("test-session-transcript");
+  const toolCalls = db
+    .query("SELECT * FROM tool_calls WHERE session_id = ?")
+    .all("test-session-transcript");
+  const agents = db
+    .query("SELECT * FROM agents WHERE session_id = ?")
+    .all("test-session-transcript");
   db.close();
 
   expect(session).toBeTruthy();
   expect(messages.length).toBe(2);
   expect(toolCalls.length).toBe(1);
   expect(agents.length).toBe(1);
+});
+
+test("migrations should be idempotent", () => {
+  const sessionData: SessionData = {
+    sessionId: "test-session-idempotent",
+    provider: "claude",
+    startedAt: new Date(),
+  };
+
+  // First call runs migrations
+  upsertSession(sessionData, TEST_DB_PATH);
+
+  // Second call should not fail (migrations already applied)
+  const sessionData2: SessionData = {
+    sessionId: "test-session-idempotent-2",
+    provider: "claude",
+    startedAt: new Date(),
+  };
+  upsertSession(sessionData2, TEST_DB_PATH);
+
+  // Verify both sessions exist
+  const db = new Database(TEST_DB_PATH);
+  const sessions = db.query("SELECT * FROM sessions").all();
+  db.close();
+
+  expect(sessions.length).toBe(2);
 });
