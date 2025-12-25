@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 
-export {};
+import { handleClaudeHook } from "./src/claude/hook.ts";
+import { handleCodexNotify } from "./src/codex/notify.ts";
 
 const command = process.argv[2];
 const subcommand = process.argv[3];
@@ -13,10 +14,8 @@ if (dbPathIndex !== -1 && process.argv[dbPathIndex + 1]) {
 }
 
 if (command === "claude" && subcommand === "hook") {
-  const { handleClaudeHook } = await import("./src/claude/hook.ts");
   await handleClaudeHook(dbPath);
 } else if (command === "codex" && subcommand === "notify") {
-  const { handleCodexNotify } = await import("./src/codex/notify.ts");
   await handleCodexNotify(dbPath);
 } else {
   console.error("Usage:");
