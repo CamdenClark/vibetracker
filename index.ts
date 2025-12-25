@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
+export {};
+
 const command = process.argv[2];
 const subcommand = process.argv[3];
 
