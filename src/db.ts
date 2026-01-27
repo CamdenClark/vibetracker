@@ -60,16 +60,20 @@ function initSchema(db: Database): void {
       error_message TEXT,
       error_code TEXT,
 
+      agent_id TEXT,
+      agent_type TEXT,
+
       meta TEXT,
       synced_at TEXT
     );
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_events_dedup
-    ON events(session_id, timestamp, event_type, COALESCE(tool_name_raw, ''));
+    ON events(session_id, timestamp, event_type, COALESCE(tool_name_raw, ''), COALESCE(tool_input, ''));
 
     CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
     CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
     CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced_at);
+    CREATE INDEX IF NOT EXISTS idx_events_agent ON events(agent_id);
   `)
 }
 
@@ -85,6 +89,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
       mcp_server, mcp_tool_name,
       file_path, file_action, file_lines_added, file_lines_removed,
       error_message, error_code,
+      agent_id, agent_type,
       meta, synced_at
     ) VALUES (
       $id, $timestamp, $user_id, $team_id, $machine_id, $session_id, $event_type, $source,
@@ -94,6 +99,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
       $mcp_server, $mcp_tool_name,
       $file_path, $file_action, $file_lines_added, $file_lines_removed,
       $error_message, $error_code,
+      $agent_id, $agent_type,
       $meta, $synced_at
     )
   `)
@@ -134,6 +140,8 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
         $file_lines_removed: event.file_lines_removed ?? null,
         $error_message: event.error_message ?? null,
         $error_code: event.error_code ?? null,
+        $agent_id: event.agent_id ?? null,
+        $agent_type: event.agent_type ?? null,
         $meta: event.meta ? JSON.stringify(event.meta) : null,
         $synced_at: event.synced_at ?? null,
       })

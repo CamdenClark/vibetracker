@@ -68,6 +68,10 @@ export interface VibeEvent {
   error_message?: string
   error_code?: string
 
+  // Subagent fields
+  agent_id?: string
+  agent_type?: string
+
   meta?: Record<string, unknown>
   synced_at?: string
 }

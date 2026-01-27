@@ -3,7 +3,12 @@
 import { parseArgs } from 'util'
 import { loadConfig } from './config'
 import { insertEvents } from './db'
-import { ingestClaudeTranscript, parseClaudeHookPayload } from './ingest/claude'
+import {
+  ingestClaudeTranscript,
+  ingestClaudeSubagentTranscript,
+  parseClaudeHookPayload,
+  isSubagentStopPayload
+} from './ingest/claude'
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -66,9 +71,16 @@ async function main() {
         process.exit(1)
       }
 
-      const events = await ingestClaudeTranscript(transcriptPath, config, hookPayload)
-      const { inserted, skipped } = insertEvents(events)
+      let events
+      if (hookPayload && isSubagentStopPayload(hookPayload)) {
+        // Handle SubagentStop hook - ingest subagent transcript
+        events = await ingestClaudeSubagentTranscript(hookPayload, config)
+      } else {
+        // Handle Stop hook or manual ingestion
+        events = await ingestClaudeTranscript(transcriptPath, config, hookPayload)
+      }
 
+      const { inserted, skipped } = insertEvents(events)
       console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
     } else {
       console.error(`Error: Source "${values.source}" not yet implemented`)
