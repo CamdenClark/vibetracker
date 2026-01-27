@@ -4,11 +4,12 @@ import { parseArgs } from 'util'
 import { loadConfig } from './config'
 import { insertEvents } from './db'
 import {
-  ingestClaudeTranscript,
-  ingestClaudeSubagentTranscript,
+  parseClaudeTranscript,
+  parseClaudeSubagentTranscript,
   parseClaudeHookPayload,
   isSubagentStopPayload
 } from './ingest/claude'
+import { mapToVibeEvents } from './ingest/mapper'
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -71,15 +72,20 @@ async function main() {
         process.exit(1)
       }
 
-      let events
+      // Parse transcript into intermediate format
+      let parsed
       if (hookPayload && isSubagentStopPayload(hookPayload)) {
-        // Handle SubagentStop hook - ingest subagent transcript
-        events = await ingestClaudeSubagentTranscript(hookPayload, config)
+        // Handle SubagentStop hook - parse subagent transcript
+        parsed = await parseClaudeSubagentTranscript(hookPayload)
       } else {
         // Handle Stop hook or manual ingestion
-        events = await ingestClaudeTranscript(transcriptPath, config, hookPayload)
+        parsed = await parseClaudeTranscript(transcriptPath, hookPayload)
       }
 
+      // Map to VibeEvents
+      const events = mapToVibeEvents(parsed, config)
+
+      // Store events
       const { inserted, skipped } = insertEvents(events)
       console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
     } else {
