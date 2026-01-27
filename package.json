@@ -1,8 +1,11 @@
 {
-  "name": "vibetracker",
-  "module": "index.ts",
+  "name": "vibe-tracker",
+  "version": "0.1.0",
+  "module": "src/cli.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "vibe-tracker": "src/cli.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
