@@ -37,6 +37,11 @@ function mapEventToVibeEvent(
     tool_name_raw: event.tool_name_raw,
     tool_input: event.tool_input,
 
+    file_path: event.file_path,
+    file_action: event.file_action,
+    file_lines_added: event.file_lines_added,
+    file_lines_removed: event.file_lines_removed,
+
     prompt_text: event.prompt_text,
 
     agent_id: event.agent_id,

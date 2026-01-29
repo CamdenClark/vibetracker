@@ -21,6 +21,12 @@ export interface ParsedEvent {
   tool_name_raw?: string
   tool_input?: string
 
+  // File operation data
+  file_path?: string
+  file_action?: 'create' | 'update' | 'delete'
+  file_lines_added?: number
+  file_lines_removed?: number
+
   // Prompt data
   prompt_text?: string
 

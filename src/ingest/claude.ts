@@ -44,6 +44,66 @@ export function isSubagentStopPayload(payload: ClaudePayload): payload is Claude
   return payload.hook_event_name === 'SubagentStop' && 'agent_id' in payload && 'agent_transcript_path' in payload
 }
 
+interface FileInfo {
+  file_path?: string
+  file_action?: 'create' | 'update' | 'delete'
+  file_lines_added?: number
+  file_lines_removed?: number
+}
+
+function countLines(text: string): number {
+  if (!text) return 0
+  return text.split('\n').length
+}
+
+function extractFileInfo(toolName: string, input: unknown): FileInfo {
+  if (!input || typeof input !== 'object') return {}
+
+  const inputObj = input as Record<string, unknown>
+
+  switch (toolName) {
+    case 'Read': {
+      const filePath = inputObj.file_path
+      if (typeof filePath === 'string') {
+        return { file_path: filePath }
+      }
+      return {}
+    }
+
+    case 'Write': {
+      const filePath = inputObj.file_path
+      const content = inputObj.content
+      if (typeof filePath === 'string') {
+        return {
+          file_path: filePath,
+          file_action: 'update', // Could be create or update, we can't tell
+          file_lines_added: typeof content === 'string' ? countLines(content) : undefined,
+        }
+      }
+      return {}
+    }
+
+    case 'Edit':
+    case 'MultiEdit': {
+      const filePath = inputObj.file_path
+      const oldString = inputObj.old_string
+      const newString = inputObj.new_string
+      if (typeof filePath === 'string') {
+        return {
+          file_path: filePath,
+          file_action: 'update',
+          file_lines_removed: typeof oldString === 'string' ? countLines(oldString) : undefined,
+          file_lines_added: typeof newString === 'string' ? countLines(newString) : undefined,
+        }
+      }
+      return {}
+    }
+
+    default:
+      return {}
+  }
+}
+
 export async function parseClaudeHookPayload(stdin: string): Promise<ClaudePayload> {
   return JSON.parse(stdin)
 }
@@ -72,7 +132,7 @@ export async function parseClaudeTranscript(
   let currentTurnInputTokens = 0
   let currentTurnModel: string | undefined
   let currentTurnTimestamp: string | undefined
-  let currentTurnToolCalls: Array<{ name: string; input: unknown }> = []
+  let currentTurnToolCalls: Array<{ name: string; input: unknown; fileInfo: FileInfo }> = []
 
   const flushTurn = () => {
     if (currentTurnTimestamp && sessionId) {
@@ -96,6 +156,10 @@ export async function parseClaudeTranscript(
           turn_index: turnIndex,
           tool_name_raw: tool.name,
           tool_input: JSON.stringify(tool.input),
+          file_path: tool.fileInfo.file_path,
+          file_action: tool.fileInfo.file_action,
+          file_lines_added: tool.fileInfo.file_lines_added,
+          file_lines_removed: tool.fileInfo.file_lines_removed,
         }))
       }
     }
@@ -165,7 +229,8 @@ export async function parseClaudeTranscript(
         for (const block of messageContent) {
           if (block && typeof block === 'object' && 'type' in block && block.type === 'tool_use') {
             const toolBlock = block as { type: 'tool_use'; name: string; input: unknown }
-            currentTurnToolCalls.push({ name: toolBlock.name, input: toolBlock.input })
+            const fileInfo = extractFileInfo(toolBlock.name, toolBlock.input)
+            currentTurnToolCalls.push({ name: toolBlock.name, input: toolBlock.input, fileInfo })
           }
         }
       }
@@ -217,6 +282,10 @@ function createParsedEvent(params: {
   total_tokens?: number
   tool_name_raw?: string
   tool_input?: string
+  file_path?: string
+  file_action?: 'create' | 'update' | 'delete'
+  file_lines_added?: number
+  file_lines_removed?: number
   prompt_text?: string
   agent_id?: string
   agent_type?: string
@@ -234,6 +303,10 @@ function createParsedEvent(params: {
     total_tokens: params.total_tokens,
     tool_name_raw: params.tool_name_raw,
     tool_input: params.tool_input,
+    file_path: params.file_path,
+    file_action: params.file_action,
+    file_lines_added: params.file_lines_added,
+    file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
     agent_id: params.agent_id,
     agent_type: params.agent_type,
@@ -323,6 +396,7 @@ export async function parseClaudeSubagentTranscript(
           if (block && typeof block === 'object' && 'type' in block) {
             if (block.type === 'tool_use') {
               const toolBlock = block as { type: 'tool_use'; name: string; input: unknown }
+              const fileInfo = extractFileInfo(toolBlock.name, toolBlock.input)
               events.push(createParsedEvent({
                 timestamp: entry.timestamp,
                 session_id: payload.session_id,
@@ -330,6 +404,10 @@ export async function parseClaudeSubagentTranscript(
                 turn_index: turnIndex,
                 tool_name_raw: toolBlock.name,
                 tool_input: JSON.stringify(toolBlock.input),
+                file_path: fileInfo.file_path,
+                file_action: fileInfo.file_action,
+                file_lines_added: fileInfo.file_lines_added,
+                file_lines_removed: fileInfo.file_lines_removed,
                 agent_id: payload.agent_id,
                 agent_type: agentType,
               }))
