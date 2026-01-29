@@ -115,20 +115,15 @@ describe('parseClaudeTranscript', () => {
 
     const result = await parseClaudeTranscript(transcriptPath)
     expect(result.session_id).toBe('sess-abc')
-    expect(result.events.length).toBe(3) // session_start, prompt, session_end
+    expect(result.events.length).toBe(1)
 
-    const sessionStart = result.events[0]
-    expect(sessionStart.event_type).toBe('session_start')
-    expect(sessionStart.session_id).toBe('sess-abc')
-    expect(sessionStart.cwd).toBe('/home/user/project')
-    expect(sessionStart.git_branch).toBe('main')
-
-    const prompt = result.events[1]
-    expect(prompt.event_type).toBe('prompt')
-    expect(prompt.prompt_text).toBe('Hello, Claude!')
-
-    const sessionEnd = result.events[2]
-    expect(sessionEnd.event_type).toBe('session_end')
+    const prompt = result.events[0]
+    expect(prompt).toBeDefined()
+    expect(prompt!.event_type).toBe('prompt')
+    expect(prompt!.session_id).toBe('sess-abc')
+    expect(prompt!.cwd).toBe('/home/user/project')
+    expect(prompt!.git_branch).toBe('main')
+    expect(prompt!.prompt_text).toBe('Hello, Claude!')
   })
 
   test('parses transcript with user prompt and assistant response', async () => {
@@ -165,7 +160,7 @@ describe('parseClaudeTranscript', () => {
     await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
 
     const result = await parseClaudeTranscript(transcriptPath)
-    expect(result.events.length).toBe(4) // session_start, prompt, turn_end, session_end
+    expect(result.events.length).toBe(2) // prompt, turn_end
 
     const turnEnd = result.events.find((e) => e.event_type === 'turn_end')
     expect(turnEnd).toBeDefined()
@@ -383,8 +378,8 @@ describe('parseClaudeTranscript', () => {
 
     expect(prompts.length).toBe(2)
     expect(turnEnds.length).toBe(2)
-    expect(turnEnds[0].turn_index).toBe(1)
-    expect(turnEnds[1].turn_index).toBe(2)
+    expect(turnEnds[0]!.turn_index).toBe(1)
+    expect(turnEnds[1]!.turn_index).toBe(2)
   })
 
   test('skips entries without content', async () => {
@@ -413,6 +408,59 @@ describe('parseClaudeTranscript', () => {
     const result = await parseClaudeTranscript(transcriptPath)
     const turnEnds = result.events.filter((e) => e.event_type === 'turn_end')
     expect(turnEnds.length).toBe(0) // No turn_end because assistant had no real content
+  })
+
+  test('skips tool_result messages as prompts', async () => {
+    const transcriptPath = join(tempDir, 'tool-result.jsonl')
+    const entries = [
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:00Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-1',
+        message: { role: 'user', content: 'Read a file' },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:01Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-2',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', name: 'Read', input: { file_path: '/test.ts' } },
+          ],
+        },
+      },
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:02Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-3',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'tool_result', tool_use_id: 'tool-1', content: 'file contents here' },
+          ],
+        },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:03Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-4',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'I read the file' }],
+        },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseClaudeTranscript(transcriptPath)
+    const prompts = result.events.filter((e) => e.event_type === 'prompt')
+    expect(prompts.length).toBe(1) // Only the real user prompt, not the tool_result
+    expect(prompts[0]!.prompt_text).toBe('Read a file')
   })
 
   test('uses hookPayload session_id when available', async () => {
@@ -469,6 +517,122 @@ describe('parseClaudeTranscript', () => {
     const result = await parseClaudeTranscript(transcriptPath)
     const turnEnd = result.events.find((e) => e.event_type === 'turn_end')
     expect(turnEnd!.prompt_tokens).toBe(130) // 100 + 20 + 10
+  })
+
+  test('extracts prompt_text from array content with text blocks', async () => {
+    const transcriptPath = join(tempDir, 'array-text-content.jsonl')
+    const entries = [
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:00Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-1',
+        message: {
+          role: 'user',
+          content: [
+            { type: 'text', text: '[Request interrupted by user]' },
+          ],
+        },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseClaudeTranscript(transcriptPath)
+    const prompts = result.events.filter((e) => e.event_type === 'prompt')
+    expect(prompts.length).toBe(1)
+    expect(prompts[0]!.prompt_text).toBe('[Request interrupted by user]')
+  })
+
+  test('creates separate turns for each assistant response', async () => {
+    const transcriptPath = join(tempDir, 'multi-turn-tools.jsonl')
+    const entries = [
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:00Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-1',
+        message: { role: 'user', content: 'Do multiple things' },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:01Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-2',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/a.ts' } }],
+          usage: { input_tokens: 100 },
+        },
+      },
+      // Tool result triggers turn flush
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:02Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-3',
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tool-1', content: 'file content' }],
+        },
+      },
+      // New turn starts
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:03Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-4',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', name: 'Write', input: { file_path: '/b.ts', content: 'new' } }],
+          usage: { input_tokens: 150 },
+        },
+      },
+      // Another tool result triggers turn flush
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:04Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-5',
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tool-2', content: 'ok' }],
+        },
+      },
+      // Final turn
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:05Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-6',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Done!' }],
+          usage: { input_tokens: 200 },
+        },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseClaudeTranscript(transcriptPath)
+    const prompts = result.events.filter((e) => e.event_type === 'prompt')
+    const turnEnds = result.events.filter((e) => e.event_type === 'turn_end')
+    const toolCalls = result.events.filter((e) => e.event_type === 'tool_call')
+
+    // Only 1 real prompt (tool_results are skipped)
+    expect(prompts.length).toBe(1)
+    // Each assistant response is a separate turn (flushed on tool_result)
+    expect(turnEnds.length).toBe(3)
+    expect(turnEnds[0]!.turn_index).toBe(1)
+    expect(turnEnds[1]!.turn_index).toBe(2)
+    expect(turnEnds[2]!.turn_index).toBe(3)
+    // Each turn has its own token count
+    expect(turnEnds[0]!.prompt_tokens).toBe(100)
+    expect(turnEnds[1]!.prompt_tokens).toBe(150)
+    expect(turnEnds[2]!.prompt_tokens).toBe(200)
+    // Tool calls are associated with their turns
+    expect(toolCalls.length).toBe(2)
+    expect(toolCalls[0]!.turn_index).toBe(1)
+    expect(toolCalls[1]!.turn_index).toBe(2)
   })
 })
 
@@ -551,16 +715,16 @@ describe('parseClaudeSubagentTranscript', () => {
     expect(result.source).toBe('claude_code')
 
     // Check events have agent_id and agent_type
-    const sessionStart = result.events.find((e) => e.event_type === 'session_start')
-    expect(sessionStart).toBeDefined()
-    expect(sessionStart!.agent_id).toBe('agent-123')
-    expect(sessionStart!.agent_type).toBe('Explore')
-
     const toolCall = result.events.find((e) => e.event_type === 'tool_call')
     expect(toolCall).toBeDefined()
     expect(toolCall!.tool_name_raw).toBe('Glob')
     expect(toolCall!.agent_id).toBe('agent-123')
     expect(toolCall!.agent_type).toBe('Explore')
+
+    const prompt = result.events.find((e) => e.event_type === 'prompt')
+    expect(prompt).toBeDefined()
+    expect(prompt!.agent_id).toBe('agent-123')
+    expect(prompt!.agent_type).toBe('Explore')
   })
 
   test('handles missing parent transcript gracefully', async () => {
@@ -601,7 +765,85 @@ describe('parseClaudeSubagentTranscript', () => {
 
     // Should still parse, just without agent_type
     expect(result.events.length).toBeGreaterThan(0)
-    expect(result.events[0].agent_id).toBe('agent-123')
-    expect(result.events[0].agent_type).toBeUndefined()
+    const prompt = result.events.find((e) => e.event_type === 'prompt')
+    expect(prompt).toBeDefined()
+    expect(prompt!.agent_id).toBe('agent-123')
+    expect(prompt!.agent_type).toBeUndefined()
+  })
+
+  test('skips tool_result messages as prompts in subagent', async () => {
+    const agentTranscriptPath = join(tempDir, 'agent-tool-results.jsonl')
+    const parentTranscriptPath = join(tempDir, 'parent-tool-results.jsonl')
+
+    const parentEntries = [
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:00Z',
+        sessionId: 'sess-parent',
+        uuid: 'uuid-parent-1',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', name: 'Task', input: { subagent_type: 'Explore' } },
+          ],
+        },
+      },
+    ]
+
+    const agentEntries = [
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:01Z',
+        uuid: 'uuid-1',
+        message: { role: 'user', content: 'Find all tests' },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:02Z',
+        uuid: 'uuid-2',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'tool_use', name: 'Glob', input: { pattern: '*.test.ts' } }],
+        },
+      },
+      // Tool result - should be skipped
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:03Z',
+        uuid: 'uuid-3',
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: 'tool-1', content: 'file1.test.ts\nfile2.test.ts' }],
+        },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:04Z',
+        uuid: 'uuid-4',
+        message: {
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Found 2 test files' }],
+        },
+      },
+    ]
+
+    await Bun.write(parentTranscriptPath, parentEntries.map((e) => JSON.stringify(e)).join('\n'))
+    await Bun.write(agentTranscriptPath, agentEntries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const payload = {
+      session_id: 'sess-parent',
+      transcript_path: parentTranscriptPath,
+      agent_id: 'agent-123',
+      agent_transcript_path: agentTranscriptPath,
+      hook_event_name: 'SubagentStop' as const,
+      cwd: '/home/user/project',
+    }
+
+    const result = await parseClaudeSubagentTranscript(payload)
+    const prompts = result.events.filter((e) => e.event_type === 'prompt')
+
+    // Only 1 real prompt, tool_result is skipped
+    expect(prompts.length).toBe(1)
+    expect(prompts[0]!.prompt_text).toBe('Find all tests')
   })
 })

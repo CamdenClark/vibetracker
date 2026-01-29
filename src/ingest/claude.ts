@@ -121,8 +121,6 @@ export async function parseClaudeTranscript(
   let sessionId = hookPayload?.session_id
   let sessionCwd = hookPayload?.cwd
   let sessionGitBranch: string | undefined
-  let firstTimestamp: string | undefined
-  let lastTimestamp: string | undefined
 
   // Track seen UUIDs to avoid duplicate processing of streaming chunks
   const seenUuids = new Set<string>()
@@ -179,17 +177,24 @@ export async function parseClaudeTranscript(
     sessionId ??= entry.sessionId
     sessionCwd ??= entry.cwd
     sessionGitBranch ??= entry.gitBranch
-    firstTimestamp ??= entry.timestamp
-    lastTimestamp = entry.timestamp
 
     if (entry.type === 'user' && entry.message?.role === 'user') {
       // Flush any pending assistant turn before processing user prompt
       flushTurn()
 
+      const content = entry.message.content
+
+      // Skip tool_result messages - these are API responses, not user prompts
+      if (Array.isArray(content) && content.some((block: any) => block?.type === 'tool_result')) {
+        continue
+      }
+
       // Extract prompt text from user message content
-      const promptText = typeof entry.message.content === 'string'
-        ? entry.message.content
-        : undefined
+      const promptText = typeof content === 'string'
+        ? content
+        : Array.isArray(content)
+          ? (content.find((block: any) => block?.type === 'text') as { text?: string } | undefined)?.text
+          : undefined
 
       events.push(createParsedEvent({
         timestamp: entry.timestamp,
@@ -239,28 +244,6 @@ export async function parseClaudeTranscript(
 
   // Flush any remaining turn
   flushTurn()
-
-  // Add session_start at the beginning
-  if (sessionId && firstTimestamp) {
-    events.unshift(createParsedEvent({
-      timestamp: firstTimestamp,
-      session_id: sessionId,
-      event_type: 'session_start',
-      cwd: sessionCwd,
-      git_branch: sessionGitBranch,
-    }))
-  }
-
-  // Add session_end at the end
-  if (sessionId && lastTimestamp) {
-    events.push(createParsedEvent({
-      timestamp: lastTimestamp,
-      session_id: sessionId,
-      event_type: 'session_end',
-      cwd: sessionCwd,
-      git_branch: sessionGitBranch,
-    }))
-  }
 
   return {
     source: 'claude_code',
@@ -330,8 +313,6 @@ export async function parseClaudeSubagentTranscript(
   let turnIndex = 0
   let sessionCwd = payload.cwd
   let sessionGitBranch: string | undefined
-  let firstTimestamp: string | undefined
-  let lastTimestamp: string | undefined
 
   for (const line of lines) {
     const entry: ClaudeTranscriptEntry = JSON.parse(line)
@@ -340,14 +321,21 @@ export async function parseClaudeSubagentTranscript(
     if (!entry.timestamp) continue
 
     sessionGitBranch ??= entry.gitBranch
-    firstTimestamp ??= entry.timestamp
-    lastTimestamp = entry.timestamp
 
     if (entry.type === 'user' && entry.message?.role === 'user') {
+      const content = entry.message.content
+
+      // Skip tool_result messages - these are API responses, not user prompts
+      if (Array.isArray(content) && content.some((block: any) => block?.type === 'tool_result')) {
+        continue
+      }
+
       // Extract prompt text from user message content
-      const promptText = typeof entry.message.content === 'string'
-        ? entry.message.content
-        : undefined
+      const promptText = typeof content === 'string'
+        ? content
+        : Array.isArray(content)
+          ? (content.find((block: any) => block?.type === 'text') as { text?: string } | undefined)?.text
+          : undefined
 
       events.push(createParsedEvent({
         timestamp: entry.timestamp,
@@ -416,32 +404,6 @@ export async function parseClaudeSubagentTranscript(
         }
       }
     }
-  }
-
-  // Add session_start for the subagent at the beginning
-  if (firstTimestamp) {
-    events.unshift(createParsedEvent({
-      timestamp: firstTimestamp,
-      session_id: payload.session_id,
-      event_type: 'session_start',
-      cwd: sessionCwd,
-      git_branch: sessionGitBranch,
-      agent_id: payload.agent_id,
-      agent_type: agentType,
-    }))
-  }
-
-  // Add session_end for the subagent at the end
-  if (lastTimestamp) {
-    events.push(createParsedEvent({
-      timestamp: lastTimestamp,
-      session_id: payload.session_id,
-      event_type: 'session_end',
-      cwd: sessionCwd,
-      git_branch: sessionGitBranch,
-      agent_id: payload.agent_id,
-      agent_type: agentType,
-    }))
   }
 
   return {

@@ -1,6 +1,4 @@
 export type EventType =
-  | 'session_start'
-  | 'session_end'
   | 'prompt'
   | 'turn_start'
   | 'turn_end'
