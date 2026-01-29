@@ -37,6 +37,8 @@ function mapEventToVibeEvent(
     tool_name_raw: event.tool_name_raw,
     tool_input: event.tool_input,
 
+    prompt_text: event.prompt_text,
+
     agent_id: event.agent_id,
     agent_type: event.agent_type,
   }

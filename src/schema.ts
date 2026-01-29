@@ -68,6 +68,8 @@ export interface VibeEvent {
   error_message?: string
   error_code?: string
 
+  prompt_text?: string
+
   // Subagent fields
   agent_id?: string
   agent_type?: string

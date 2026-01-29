@@ -21,6 +21,9 @@ export interface ParsedEvent {
   tool_name_raw?: string
   tool_input?: string
 
+  // Prompt data
+  prompt_text?: string
+
   // Subagent data
   agent_id?: string
   agent_type?: string

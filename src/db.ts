@@ -60,6 +60,8 @@ function initSchema(db: Database): void {
       error_message TEXT,
       error_code TEXT,
 
+      prompt_text TEXT,
+
       agent_id TEXT,
       agent_type TEXT,
 
@@ -89,6 +91,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
       mcp_server, mcp_tool_name,
       file_path, file_action, file_lines_added, file_lines_removed,
       error_message, error_code,
+      prompt_text,
       agent_id, agent_type,
       meta, synced_at
     ) VALUES (
@@ -99,6 +102,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
       $mcp_server, $mcp_tool_name,
       $file_path, $file_action, $file_lines_added, $file_lines_removed,
       $error_message, $error_code,
+      $prompt_text,
       $agent_id, $agent_type,
       $meta, $synced_at
     )
@@ -140,6 +144,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
         $file_lines_removed: event.file_lines_removed ?? null,
         $error_message: event.error_message ?? null,
         $error_code: event.error_code ?? null,
+        $prompt_text: event.prompt_text ?? null,
         $agent_id: event.agent_id ?? null,
         $agent_type: event.agent_type ?? null,
         $meta: event.meta ? JSON.stringify(event.meta) : null,

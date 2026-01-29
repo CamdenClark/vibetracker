@@ -122,12 +122,18 @@ export async function parseClaudeTranscript(
       // Flush any pending assistant turn before processing user prompt
       flushTurn()
 
+      // Extract prompt text from user message content
+      const promptText = typeof entry.message.content === 'string'
+        ? entry.message.content
+        : undefined
+
       events.push(createParsedEvent({
         timestamp: entry.timestamp,
         session_id: sessionId,
         event_type: 'prompt',
         cwd: sessionCwd,
         git_branch: sessionGitBranch,
+        prompt_text: promptText,
       }))
     } else if (entry.type === 'assistant' && entry.message?.role === 'assistant') {
       // Skip already-processed streaming chunks
@@ -211,6 +217,7 @@ function createParsedEvent(params: {
   total_tokens?: number
   tool_name_raw?: string
   tool_input?: string
+  prompt_text?: string
   agent_id?: string
   agent_type?: string
 }): ParsedEvent {
@@ -227,6 +234,7 @@ function createParsedEvent(params: {
     total_tokens: params.total_tokens,
     tool_name_raw: params.tool_name_raw,
     tool_input: params.tool_input,
+    prompt_text: params.prompt_text,
     agent_id: params.agent_id,
     agent_type: params.agent_type,
   }
@@ -263,12 +271,18 @@ export async function parseClaudeSubagentTranscript(
     lastTimestamp = entry.timestamp
 
     if (entry.type === 'user' && entry.message?.role === 'user') {
+      // Extract prompt text from user message content
+      const promptText = typeof entry.message.content === 'string'
+        ? entry.message.content
+        : undefined
+
       events.push(createParsedEvent({
         timestamp: entry.timestamp,
         session_id: payload.session_id,
         event_type: 'prompt',
         cwd: sessionCwd,
         git_branch: sessionGitBranch,
+        prompt_text: promptText,
         agent_id: payload.agent_id,
         agent_type: agentType,
       }))
