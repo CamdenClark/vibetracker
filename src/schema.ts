@@ -1,4 +1,6 @@
 export type EventType =
+  | 'session_start'
+  | 'session_end'
   | 'prompt'
   | 'turn_start'
   | 'turn_end'
@@ -23,6 +25,7 @@ export type ToolName =
 export type AgentSource =
   | 'claude_code'
   | 'codex'
+  | 'gemini'
   | 'opencode'
   | 'cursor'
   | 'other'
