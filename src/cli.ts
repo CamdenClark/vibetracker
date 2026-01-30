@@ -14,6 +14,11 @@ import {
   parseCodexHookPayload,
   findCodexTranscript
 } from './ingest/codex'
+import {
+  parseGeminiTranscript,
+  parseGeminiHookPayload,
+  findGeminiTranscript
+} from './ingest/gemini'
 import { mapToVibeEvents } from './ingest/mapper'
 
 const { values, positionals } = parseArgs({
@@ -43,7 +48,7 @@ Commands:
   query     Run SQL query against local database
 
 Options:
-  -s, --source <source>     Agent source (claude, codex, opencode, cursor)
+  -s, --source <source>     Agent source (claude, codex, gemini, opencode, cursor)
   -t, --transcript <path>   Path to transcript file (optional for claude)
   -h, --help                Show this help
 `)
@@ -121,6 +126,38 @@ async function main() {
 
       // Map to VibeEvents
       const events = await mapToVibeEvents(parsed, config)
+
+      // Store events
+      const { inserted, skipped } = insertEvents(events)
+      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+    } else if (values.source === 'gemini') {
+      let transcriptPath = values.transcript
+      let hookPayload
+
+      // If no transcript path, try reading hook payload from stdin
+      if (!transcriptPath) {
+        const stdin = await Bun.stdin.text()
+        if (stdin.trim()) {
+          hookPayload = await parseGeminiHookPayload(stdin)
+          transcriptPath = hookPayload.transcript_path
+        }
+      }
+
+      // If still no transcript, try to find the most recent one
+      if (!transcriptPath) {
+        transcriptPath = await findGeminiTranscript() ?? undefined
+      }
+
+      if (!transcriptPath) {
+        console.error('Error: No transcript path. Provide --transcript or pipe hook payload to stdin')
+        process.exit(1)
+      }
+
+      // Parse transcript into intermediate format
+      const parsed = await parseGeminiTranscript(transcriptPath, hookPayload)
+
+      // Map to VibeEvents
+      const events = mapToVibeEvents(parsed, config)
 
       // Store events
       const { inserted, skipped } = insertEvents(events)
