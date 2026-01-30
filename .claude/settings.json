@@ -2,14 +2,24 @@
   "hooks": {
     "Stop": [
       {
-        "type": "command",
-        "command": "bun /Users/camdenclark/vibetracker/src/cli.ts ingest --source claude"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun /Users/camdenclark/vibetracker/src/cli.ts ingest --source claude"
+          }
+        ]
       }
     ],
     "SubagentStop": [
       {
-        "type": "command",
-        "command": "bun /Users/camdenclark/vibetracker/src/cli.ts ingest --source claude"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun /Users/camdenclark/vibetracker/src/cli.ts ingest --source claude"
+          }
+        ]
       }
     ]
   }

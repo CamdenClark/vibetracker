@@ -1,11 +1,28 @@
 {
-  "name": "vibe-tracker",
+  "name": "vibetracker",
   "version": "0.1.0",
+  "description": "Analytics for agentic coding sessions - track tokens, tools, errors, and more",
   "module": "src/cli.ts",
   "type": "module",
   "bin": {
-    "vibe-tracker": "src/cli.ts"
+    "vibetracker": "src/cli.ts"
   },
+  "files": [
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/camdenclark/vibetracker"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "analytics",
+    "agentic",
+    "coding",
+    "cli"
+  ],
+  "license": "MIT",
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit"
