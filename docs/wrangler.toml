@@ -1,5 +1,10 @@
 name = "vibetracker-docs"
 main = "worker.ts"
 compatibility_date = "2024-01-01"
+workers_dev = true
 
 assets = { directory = "./public" }
+
+routes = [
+  { pattern = "vibetracker.ai", custom_domain = true }
+]
