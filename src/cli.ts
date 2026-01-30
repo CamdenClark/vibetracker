@@ -88,7 +88,7 @@ async function main() {
       }
 
       // Map to VibeEvents
-      const events = mapToVibeEvents(parsed, config)
+      const events = await mapToVibeEvents(parsed, config)
 
       // Store events
       const { inserted, skipped } = insertEvents(events)
@@ -120,7 +120,7 @@ async function main() {
       const parsed = await parseCodexTranscript(transcriptPath, hookPayload)
 
       // Map to VibeEvents
-      const events = mapToVibeEvents(parsed, config)
+      const events = await mapToVibeEvents(parsed, config)
 
       // Store events
       const { inserted, skipped } = insertEvents(events)
