@@ -2,15 +2,24 @@ import type { VibeEvent } from '../schema'
 import type { Config } from '../config'
 import type { ParsedTranscript, ParsedEvent } from './types'
 import { normalizeToolName } from '../normalize'
+import { getGitRepo } from '../cache'
 
-export function mapToVibeEvents(parsed: ParsedTranscript, config: Config): VibeEvent[] {
-  return parsed.events.map(event => mapEventToVibeEvent(event, parsed.source, config))
+export async function mapToVibeEvents(parsed: ParsedTranscript, config: Config): Promise<VibeEvent[]> {
+  // Look up git repo from cache if not in transcript and we have a cwd
+  let cachedGitRepo: string | null = null
+  const firstEventWithCwd = parsed.events.find(e => e.cwd)
+  if (firstEventWithCwd?.cwd && !parsed.events.some(e => e.git_repo)) {
+    cachedGitRepo = await getGitRepo(firstEventWithCwd.cwd)
+  }
+
+  return parsed.events.map(event => mapEventToVibeEvent(event, parsed.source, config, cachedGitRepo))
 }
 
 function mapEventToVibeEvent(
   event: ParsedEvent,
   source: ParsedTranscript['source'],
-  config: Config
+  config: Config,
+  cachedGitRepo: string | null
 ): VibeEvent {
   const vibeEvent: VibeEvent = {
     id: generateUUIDv7(),
@@ -23,6 +32,7 @@ function mapEventToVibeEvent(
     source: source,
 
     session_cwd: event.cwd,
+    session_git_repo: event.git_repo ?? cachedGitRepo ?? undefined,
     session_git_branch: event.git_branch,
 
     turn_index: event.turn_index,

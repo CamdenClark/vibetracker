@@ -9,6 +9,7 @@ export interface ParsedEvent {
   // Context
   cwd?: string
   git_branch?: string
+  git_repo?: string  // "owner/repo" format
 
   // Turn data
   turn_index?: number

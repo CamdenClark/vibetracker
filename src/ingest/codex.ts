@@ -1,5 +1,6 @@
 import type { ParsedTranscript, ParsedEvent } from './types'
 import type { EventType } from '../schema'
+import { parseGitRepoFromUrl } from '../cache'
 
 // Hook payload sent by Codex CLI
 export interface CodexHookPayload {
@@ -237,6 +238,7 @@ export async function parseCodexTranscript(
         total_tokens: (currentTurnInputTokens + currentTurnOutputTokens) || undefined,
         cwd: sessionCwd,
         git_branch: sessionGitBranch,
+        git_repo: sessionGitRepo,
       }))
 
       // Add tool calls for this turn
@@ -254,6 +256,7 @@ export async function parseCodexTranscript(
           file_lines_removed: tool.fileInfo.file_lines_removed,
           cwd: sessionCwd,
           git_branch: sessionGitBranch,
+          git_repo: sessionGitRepo,
         }))
       }
     }
@@ -279,7 +282,9 @@ export async function parseCodexTranscript(
       sessionId ??= meta.payload.id
       sessionCwd ??= meta.payload.cwd
       sessionGitBranch ??= meta.payload.git?.branch
-      sessionGitRepo ??= meta.payload.git?.repository_url
+      if (!sessionGitRepo && meta.payload.git?.repository_url) {
+        sessionGitRepo = parseGitRepoFromUrl(meta.payload.git.repository_url)
+      }
     } else if (entry.type === 'turn_context') {
       const ctx = entry as CodexTurnContext
       currentTurnModel = ctx.payload.model
@@ -298,6 +303,7 @@ export async function parseCodexTranscript(
             event_type: 'prompt',
             cwd: sessionCwd,
             git_branch: sessionGitBranch,
+            git_repo: sessionGitRepo,
             prompt_text: msg.payload.message,
           }))
         }
@@ -361,6 +367,7 @@ export async function parseCodexTranscript(
       event_type: 'session_start',
       cwd: sessionCwd,
       git_branch: sessionGitBranch,
+      git_repo: sessionGitRepo,
     }))
   }
 
@@ -372,6 +379,7 @@ export async function parseCodexTranscript(
       event_type: 'session_end',
       cwd: sessionCwd,
       git_branch: sessionGitBranch,
+      git_repo: sessionGitRepo,
     }))
   }
 
@@ -388,6 +396,7 @@ function createParsedEvent(params: {
   event_type: EventType
   cwd?: string
   git_branch?: string
+  git_repo?: string
   turn_index?: number
   model?: string
   prompt_tokens?: number
@@ -407,6 +416,7 @@ function createParsedEvent(params: {
     event_type: params.event_type,
     cwd: params.cwd,
     git_branch: params.git_branch,
+    git_repo: params.git_repo,
     turn_index: params.turn_index,
     model: params.model,
     prompt_tokens: params.prompt_tokens,
