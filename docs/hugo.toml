@@ -1,0 +1,9 @@
+baseURL = 'https://example.org/'
+languageCode = 'en-us'
+title = 'Vibetracker Documentation'
+theme = 'hugo-book'
+
+[params]
+  BookTheme = 'auto'
+  BookToC = true
+  BookSection = 'docs'
