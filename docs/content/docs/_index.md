@@ -18,57 +18,14 @@ Vibetracker captures events from your agentic coding sessions and stores them lo
 
 All data stays on your machine in `~/.vibetracker/events.db`.
 
-## Installation
+## Supported Tools
 
-### As a Claude Code Plugin
+Vibetracker works with multiple agentic coding tools:
 
-Add the vibetracker plugins marketplace:
+- [Claude Code]({{< relref "installation/claude" >}}) - Anthropic's CLI for Claude
+- [Codex]({{< relref "installation/codex" >}}) - OpenAI's coding agent
+- [Gemini CLI]({{< relref "installation/gemini" >}}) - Google's Gemini CLI
 
-```bash
-/plugin marketplace add camdenclark/vibetracker-plugins
-```
+## Quick Start
 
-Install the tracker plugin to automatically capture session data:
-
-```bash
-/plugin install tracker
-```
-
-### Manual Installation
-
-1. Install the package globally:
-
-```bash
-bun add -g vibetracker
-```
-
-2. Add hooks to your `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bunx vibetracker ingest --source claude"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bunx vibetracker ingest --source claude"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+{{< button relref="/docs/installation" >}}Get Started{{< /button >}}
