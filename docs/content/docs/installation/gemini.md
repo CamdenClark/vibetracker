@@ -7,13 +7,25 @@ weight: 3
 
 Install Vibetracker to track your [Gemini CLI](https://github.com/google-gemini/gemini-cli) sessions.
 
-## Install the Package
+## Quick Install (Recommended)
+
+Run the install command to automatically configure Gemini:
+
+```bash
+bunx vibetracker install --source gemini
+```
+
+This adds the AfterAgent hook to `~/.gemini/settings.json`.
+
+## Manual Installation
+
+### Install the Package
 
 ```bash
 bun add -g vibetracker
 ```
 
-## Configure Hooks
+### Configure Hooks
 
 Add the following to your `~/.gemini/settings.json`:
 

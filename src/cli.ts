@@ -20,6 +20,7 @@ import {
   findGeminiTranscript
 } from './ingest/gemini'
 import { mapToVibeEvents } from './ingest/mapper'
+import { installSource } from './install'
 
 const { values, positionals } = parseArgs({
   args: Bun.argv.slice(2),
@@ -38,11 +39,13 @@ if (values.help || !command) {
 vibe-tracker - Track agentic coding sessions
 
 Usage:
+  vibe-tracker install --source <source>
   vibe-tracker ingest --source <source> [--transcript <path>]
   vibe-tracker status
   vibe-tracker query <sql>
 
 Commands:
+  install   Configure automatic ingestion for an agent
   ingest    Ingest events from an agent transcript
   status    Show database status
   query     Run SQL query against local database
@@ -56,6 +59,22 @@ Options:
 }
 
 async function main() {
+  if (command === 'install') {
+    if (!values.source) {
+      console.error('Error: --source is required (codex or gemini)')
+      process.exit(1)
+    }
+
+    const result = await installSource(values.source)
+    if (result.success) {
+      console.log(`✓ ${result.message}`)
+    } else {
+      console.error(`✗ ${result.message}`)
+      process.exit(1)
+    }
+    return
+  }
+
   const config = await loadConfig()
 
   if (command === 'ingest') {
