@@ -13,27 +13,7 @@ Install Vibetracker to track your [OpenAI Codex](https://openai.com/codex) sessi
 bun add -g vibetracker
 ```
 
-## Manual Ingestion
-
-After a Codex session, run:
-
-```bash
-bunx vibetracker ingest --source codex
-```
-
-This automatically finds the most recent session transcript from `~/.codex/sessions/`.
-
-### Specify a Transcript
-
-To ingest a specific session:
-
-```bash
-bunx vibetracker ingest --source codex --transcript ~/.codex/sessions/2024/01/15/session-abc123.jsonl
-```
-
-## Automatic Ingestion with Notify Hook
-
-Codex supports a `notify` configuration option that triggers an external program when an agent turn completes. You can use this to automatically ingest sessions into Vibetracker.
+## Configure Hooks
 
 Add the following to your `~/.codex/config.toml`:
 
@@ -41,7 +21,7 @@ Add the following to your `~/.codex/config.toml`:
 notify = ["bunx", "vibetracker", "ingest", "--source", "codex"]
 ```
 
-This will automatically run vibetracker ingestion after each Codex session completes. The notify hook receives a JSON payload containing the session details (session_id, transcript_path, cwd) and triggers on `agent-turn-complete` events.
+The notify hook triggers on `agent-turn-complete` events, automatically capturing session data. The hook receives a JSON payload via stdin containing `session_id`, `transcript_path`, and `cwd`.
 
 ## Transcript Location
 

@@ -13,38 +13,32 @@ Install Vibetracker to track your [Gemini CLI](https://github.com/google-gemini/
 bun add -g vibetracker
 ```
 
-## Manual Ingestion
+## Configure Hooks
 
-After a Gemini session, run:
+Add the following to your `~/.gemini/settings.json`:
 
-```bash
-bunx vibetracker ingest --source gemini
+```json
+{
+  "hooks": {
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bunx vibetracker ingest --source gemini",
+            "name": "vibetracker",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
-This automatically finds the most recent session transcript from `~/.gemini/tmp/`.
+The `AfterAgent` hook fires when the agent loop completes, automatically capturing the session data. The hook receives session metadata via stdin including `session_id`, `transcript_path`, `cwd`, and `timestamp`.
 
-### Specify a Transcript
-
-To ingest a specific session:
-
-```bash
-bunx vibetracker ingest --source gemini --transcript ~/.gemini/tmp/<project-hash>/chats/session-abc123.json
-```
-
-## Automatic Ingestion with Hooks
-
-If Gemini CLI supports hooks, configure automatic ingestion by piping the hook payload:
-
-```bash
-bunx vibetracker ingest --source gemini
-```
-
-The ingester reads from stdin and extracts:
-- `session_id` - Session identifier
-- `transcript_path` - Path to the transcript file
-- `cwd` - Working directory
-- `hook_event_name` - Name of the hook event
-- `timestamp` - Event timestamp
+For project-specific configuration, you can also add hooks to `.gemini/settings.json` in your project directory.
 
 ## Transcript Location
 
