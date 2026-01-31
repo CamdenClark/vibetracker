@@ -7,13 +7,25 @@ weight: 2
 
 Install Vibetracker to track your [OpenAI Codex](https://openai.com/codex) sessions.
 
-## Install the Package
+## Quick Install (Recommended)
+
+Run the install command to automatically configure Codex:
+
+```bash
+bunx vibetracker install --source codex
+```
+
+This adds the notify hook to `~/.codex/config.toml`.
+
+## Manual Installation
+
+### Install the Package
 
 ```bash
 bun add -g vibetracker
 ```
 
-## Configure Hooks
+### Configure Hooks
 
 Add the following to your `~/.codex/config.toml`:
 
