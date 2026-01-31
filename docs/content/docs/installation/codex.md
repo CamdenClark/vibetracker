@@ -35,48 +35,13 @@ bunx vibetracker ingest --source codex --transcript ~/.codex/sessions/2024/01/15
 
 Codex supports a `notify` configuration option that triggers an external program when an agent turn completes. You can use this to automatically ingest sessions into Vibetracker.
 
-### Configure Codex Notify
-
 Add the following to your `~/.codex/config.toml`:
 
 ```toml
 notify = ["bunx", "vibetracker", "ingest", "--source", "codex"]
 ```
 
-This will automatically run vibetracker ingestion after each Codex session completes.
-
-### Alternative: Custom Notification Script
-
-For more control, create a notification script that processes the JSON payload from Codex:
-
-```bash
-#!/usr/bin/env bash
-# ~/.codex/notify-vibetracker.sh
-
-# Codex passes a JSON payload as the first argument
-PAYLOAD="$1"
-
-# Extract session details and ingest
-echo "$PAYLOAD" | bunx vibetracker ingest --source codex
-```
-
-Make it executable:
-
-```bash
-chmod +x ~/.codex/notify-vibetracker.sh
-```
-
-Then configure it in `~/.codex/config.toml`:
-
-```toml
-notify = ["/home/yourusername/.codex/notify-vibetracker.sh"]
-```
-
-The notify hook receives a JSON payload containing:
-- `session_id` - Session identifier
-- `transcript_path` - Path to the transcript file
-- `cwd` - Working directory
-- Event type (currently only `agent-turn-complete` is supported)
+This will automatically run vibetracker ingestion after each Codex session completes. The notify hook receives a JSON payload containing the session details (session_id, transcript_path, cwd) and triggers on `agent-turn-complete` events.
 
 ## Transcript Location
 
