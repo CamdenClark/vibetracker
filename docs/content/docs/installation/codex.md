@@ -31,18 +31,17 @@ To ingest a specific session:
 bunx vibetracker ingest --source codex --transcript ~/.codex/sessions/2024/01/15/session-abc123.jsonl
 ```
 
-## Automatic Ingestion with Hooks
+## Automatic Ingestion with Notify Hook
 
-If Codex supports hooks, you can configure automatic ingestion by piping the hook payload:
+Codex supports a `notify` configuration option that triggers an external program when an agent turn completes. You can use this to automatically ingest sessions into Vibetracker.
 
-```bash
-bunx vibetracker ingest --source codex
+Add the following to your `~/.codex/config.toml`:
+
+```toml
+notify = ["bunx", "vibetracker", "ingest", "--source", "codex"]
 ```
 
-The ingester reads from stdin and extracts:
-- `session_id` - Session identifier
-- `transcript_path` - Path to the transcript file
-- `cwd` - Working directory
+This will automatically run vibetracker ingestion after each Codex session completes. The notify hook receives a JSON payload containing the session details (session_id, transcript_path, cwd) and triggers on `agent-turn-complete` events.
 
 ## Transcript Location
 
