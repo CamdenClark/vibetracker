@@ -4,7 +4,7 @@ import type { ParsedTranscript } from './types'
 import type { Config } from '../config'
 
 // Mock getGitRepo to avoid actual git/gh calls
-const mockGetGitRepo = mock(() => Promise.resolve(null))
+const mockGetGitRepo = mock(() => Promise.resolve(null as string | null))
 mock.module('../cache', () => ({
   getGitRepo: mockGetGitRepo,
 }))
@@ -39,15 +39,15 @@ describe('mapToVibeEvents', () => {
     const events = await mapToVibeEvents(parsed, testConfig)
 
     expect(events).toHaveLength(1)
-    expect(events[0].timestamp).toBe('2024-01-01T00:00:00Z')
-    expect(events[0].event_type).toBe('session_start')
-    expect(events[0].session_id).toBe('test-session')
-    expect(events[0].user_id).toBe('test-user')
-    expect(events[0].team_id).toBe('test-team')
-    expect(events[0].machine_id).toBe('test-machine')
-    expect(events[0].source).toBe('claude_code')
-    expect(events[0].session_cwd).toBe('/test/path')
-    expect(events[0].session_git_branch).toBe('main')
+    expect(events[0]!.timestamp).toBe('2024-01-01T00:00:00Z')
+    expect(events[0]!.event_type).toBe('session_start')
+    expect(events[0]!.session_id).toBe('test-session')
+    expect(events[0]!.user_id).toBe('test-user')
+    expect(events[0]!.team_id).toBe('test-team')
+    expect(events[0]!.machine_id).toBe('test-machine')
+    expect(events[0]!.source).toBe('claude_code')
+    expect(events[0]!.session_cwd).toBe('/test/path')
+    expect(events[0]!.session_git_branch).toBe('main')
   })
 
   test('uses git_repo from event when provided', async () => {
@@ -67,7 +67,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].session_git_repo).toBe('owner/repo')
+    expect(events[0]!.session_git_repo).toBe('owner/repo')
     expect(mockGetGitRepo).not.toHaveBeenCalled()
   })
 
@@ -89,7 +89,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].session_git_repo).toBe('cached/repo')
+    expect(events[0]!.session_git_repo).toBe('cached/repo')
     expect(mockGetGitRepo).toHaveBeenCalledWith('/test/path')
   })
 
@@ -112,7 +112,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].session_git_repo).toBe('event/repo')
+    expect(events[0]!.session_git_repo).toBe('event/repo')
     expect(mockGetGitRepo).not.toHaveBeenCalled()
   })
 
@@ -131,7 +131,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].session_git_repo).toBeUndefined()
+    expect(events[0]!.session_git_repo).toBeUndefined()
     expect(mockGetGitRepo).not.toHaveBeenCalled()
   })
 
@@ -151,8 +151,8 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].tool_name).toBe('file_read')
-    expect(events[0].tool_name_raw).toBe('Read')
+    expect(events[0]!.tool_name).toBe('file_read')
+    expect(events[0]!.tool_name_raw).toBe('Read')
   })
 
   test('generates unique UUIDv7 ids', async () => {
@@ -175,11 +175,11 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].id).toBeDefined()
-    expect(events[1].id).toBeDefined()
-    expect(events[0].id).not.toBe(events[1].id)
+    expect(events[0]!.id).toBeDefined()
+    expect(events[1]!.id).toBeDefined()
+    expect(events[0]!.id).not.toBe(events[1]!.id)
     // Check it looks like a UUID (contains hyphens and hex chars)
-    expect(events[0].id).toMatch(/^[0-9a-f-]+$/)
+    expect(events[0]!.id).toMatch(/^[0-9a-f-]+$/)
   })
 
   test('maps file operation fields', async () => {
@@ -201,9 +201,9 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].file_path).toBe('/test/file.ts')
-    expect(events[0].file_action).toBe('create')
-    expect(events[0].file_lines_added).toBe(10)
+    expect(events[0]!.file_path).toBe('/test/file.ts')
+    expect(events[0]!.file_action).toBe('create')
+    expect(events[0]!.file_lines_added).toBe(10)
   })
 
   test('maps prompt_text field', async () => {
@@ -222,7 +222,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].prompt_text).toBe('Fix the bug')
+    expect(events[0]!.prompt_text).toBe('Fix the bug')
   })
 
   test('maps subagent fields', async () => {
@@ -242,7 +242,7 @@ describe('mapToVibeEvents', () => {
 
     const events = await mapToVibeEvents(parsed, testConfig)
 
-    expect(events[0].agent_id).toBe('agent-123')
-    expect(events[0].agent_type).toBe('Explore')
+    expect(events[0]!.agent_id).toBe('agent-123')
+    expect(events[0]!.agent_type).toBe('Explore')
   })
 })
