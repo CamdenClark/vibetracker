@@ -75,7 +75,7 @@ describe('parseCodexTranscript', () => {
     expect(result.session_id).toBe('019aacfe-694c-7810-9cd3-8983125d7af8')
     expect(result.events.length).toBe(2) // session_start, session_end
 
-    const sessionStart = result.events[0]
+    const sessionStart = result.events[0]!
     expect(sessionStart.event_type).toBe('session_start')
     expect(sessionStart.cwd).toBe('/Users/camdenclark/vibetracker')
     expect(sessionStart.git_branch).toBe('main')
@@ -277,12 +277,12 @@ describe('parseCodexTranscript', () => {
     const turnEnds = result.events.filter((e) => e.event_type === 'turn_end')
 
     expect(prompts.length).toBe(2)
-    expect(prompts[0].prompt_text).toBe('test')
-    expect(prompts[1].prompt_text).toBe('hello')
+    expect(prompts[0]!.prompt_text).toBe('test')
+    expect(prompts[1]!.prompt_text).toBe('hello')
 
     // Only one completed turn (the second one)
     expect(turnEnds.length).toBe(1)
-    expect(turnEnds[0].turn_index).toBe(1)
+    expect(turnEnds[0]!.turn_index).toBe(1)
   })
 
   test('handles multiple turns correctly', async () => {
@@ -322,8 +322,8 @@ describe('parseCodexTranscript', () => {
 
     expect(prompts.length).toBe(2)
     expect(turnEnds.length).toBe(2)
-    expect(turnEnds[0].turn_index).toBe(1)
-    expect(turnEnds[1].turn_index).toBe(2)
+    expect(turnEnds[0]!.turn_index).toBe(1)
+    expect(turnEnds[1]!.turn_index).toBe(2)
   })
 
   test('uses hookPayload session_id when available', async () => {

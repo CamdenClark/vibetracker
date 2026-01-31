@@ -55,8 +55,8 @@ describe('parseGeminiTranscript', () => {
     expect(result.session_id).toBe('session-empty')
     // Should have session_start and session_end
     expect(result.events.length).toBe(2)
-    expect(result.events[0].event_type).toBe('session_start')
-    expect(result.events[1].event_type).toBe('session_end')
+    expect(result.events[0]!.event_type).toBe('session_start')
+    expect(result.events[1]!.event_type).toBe('session_end')
   })
 
   test('parses single user message', async () => {
@@ -302,12 +302,12 @@ describe('parseGeminiTranscript', () => {
     const turnEnds = result.events.filter((e) => e.event_type === 'turn_end')
 
     expect(prompts.length).toBe(2)
-    expect(prompts[0].prompt_text).toBe('First question')
-    expect(prompts[1].prompt_text).toBe('Second question')
+    expect(prompts[0]!.prompt_text).toBe('First question')
+    expect(prompts[1]!.prompt_text).toBe('Second question')
 
     expect(turnEnds.length).toBe(2)
-    expect(turnEnds[0].turn_index).toBe(1)
-    expect(turnEnds[1].turn_index).toBe(2)
+    expect(turnEnds[0]!.turn_index).toBe(1)
+    expect(turnEnds[1]!.turn_index).toBe(2)
   })
 
   test('handles error messages', async () => {
@@ -360,9 +360,9 @@ describe('parseGeminiTranscript', () => {
     const result = await parseGeminiTranscript(transcriptPath)
     // Should only have session_start, prompt, session_end
     expect(result.events.length).toBe(3)
-    expect(result.events[0].event_type).toBe('session_start')
-    expect(result.events[1].event_type).toBe('prompt')
-    expect(result.events[2].event_type).toBe('session_end')
+    expect(result.events[0]!.event_type).toBe('session_start')
+    expect(result.events[1]!.event_type).toBe('prompt')
+    expect(result.events[2]!.event_type).toBe('session_end')
   })
 
   test('uses hookPayload session_id when available', async () => {
@@ -589,10 +589,10 @@ describe('parseGeminiTranscript', () => {
     const result = await parseGeminiTranscript(transcriptPath)
     const toolCalls = result.events.filter((e) => e.event_type === 'tool_call')
     expect(toolCalls.length).toBe(2)
-    expect(toolCalls[0].tool_name_raw).toBe('read_file')
-    expect(toolCalls[1].tool_name_raw).toBe('write_file')
+    expect(toolCalls[0]!.tool_name_raw).toBe('read_file')
+    expect(toolCalls[1]!.tool_name_raw).toBe('write_file')
     // Both should have same turn_index
-    expect(toolCalls[0].turn_index).toBe(1)
-    expect(toolCalls[1].turn_index).toBe(1)
+    expect(toolCalls[0]!.turn_index).toBe(1)
+    expect(toolCalls[1]!.turn_index).toBe(1)
   })
 })
