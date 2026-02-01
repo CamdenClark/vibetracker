@@ -16,9 +16,9 @@ describe('parseCodexHookPayload', () => {
     })
 
     const payload = await parseCodexHookPayload(stdin)
-    expect(payload.session_id).toBe('sess-123')
-    expect(payload.transcript_path).toBe('/path/to/transcript.jsonl')
-    expect(payload.cwd).toBe('/home/user/project')
+    expect(payload!.session_id).toBe('sess-123')
+    expect(payload!.transcript_path).toBe('/path/to/transcript.jsonl')
+    expect(payload!.cwd).toBe('/home/user/project')
   })
 
   test('returns null on invalid JSON', async () => {
