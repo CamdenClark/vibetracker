@@ -4,6 +4,7 @@ import { mkdirSync } from 'fs'
 
 const CODEX_CONFIG_PATH = join(homedir(), '.codex', 'config.toml')
 const GEMINI_SETTINGS_PATH = join(homedir(), '.gemini', 'settings.json')
+const CURSOR_HOOKS_PATH = join(homedir(), '.cursor', 'hooks.json')
 
 export async function installCodex(): Promise<{ success: boolean; message: string }> {
   const configFile = Bun.file(CODEX_CONFIG_PATH)
@@ -113,13 +114,83 @@ export async function installGemini(): Promise<{ success: boolean; message: stri
   return { success: true, message: 'Created Gemini settings with vibetracker hooks' }
 }
 
+interface CursorHook {
+  command: string
+  timeout?: number
+  failClosed?: boolean
+}
+
+interface CursorHooksConfig {
+  version?: number
+  hooks?: {
+    stop?: CursorHook[]
+    sessionEnd?: CursorHook[]
+    [key: string]: CursorHook[] | undefined
+  }
+}
+
+export async function installCursor(): Promise<{ success: boolean; message: string }> {
+  const hooksFile = Bun.file(CURSOR_HOOKS_PATH)
+
+  const vibeTrackerHook: CursorHook = {
+    command: 'bunx vibetracker ingest --source cursor',
+    timeout: 30000
+  }
+
+  if (await hooksFile.exists()) {
+    const content = await hooksFile.text()
+    let config: CursorHooksConfig
+
+    try {
+      config = JSON.parse(content)
+    } catch {
+      return { success: false, message: 'Failed to parse Cursor hooks.json' }
+    }
+
+    // Check if stop hook with vibetracker already exists
+    if (config.hooks?.stop) {
+      const hasVibetracker = config.hooks.stop.some(hook =>
+        hook.command?.includes('vibetracker')
+      )
+      if (hasVibetracker) {
+        return { success: true, message: 'Vibetracker already configured in Cursor' }
+      }
+    }
+
+    // Add stop hook
+    if (!config.hooks) {
+      config.hooks = {}
+    }
+    if (!config.hooks.stop) {
+      config.hooks.stop = []
+    }
+    config.hooks.stop.push(vibeTrackerHook)
+
+    await Bun.write(CURSOR_HOOKS_PATH, JSON.stringify(config, null, 2) + '\n')
+    return { success: true, message: 'Added vibetracker to Cursor stop hooks' }
+  }
+
+  // Create new hooks file
+  mkdirSync(join(homedir(), '.cursor'), { recursive: true })
+  const config: CursorHooksConfig = {
+    version: 1,
+    hooks: {
+      stop: [vibeTrackerHook]
+    }
+  }
+  await Bun.write(CURSOR_HOOKS_PATH, JSON.stringify(config, null, 2) + '\n')
+  return { success: true, message: 'Created Cursor hooks.json with vibetracker' }
+}
+
 export async function installSource(source: string): Promise<{ success: boolean; message: string }> {
   switch (source) {
     case 'codex':
       return installCodex()
     case 'gemini':
       return installGemini()
+    case 'cursor':
+      return installCursor()
     default:
-      return { success: false, message: `Install not supported for source: ${source}. Use "codex" or "gemini".` }
+      return { success: false, message: `Install not supported for source: ${source}. Use "codex", "gemini", or "cursor".` }
   }
 }
