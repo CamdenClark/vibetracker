@@ -2,9 +2,18 @@
 
 Analytics for agentic coding sessions. Track tokens, tools, errors, and more across your team.
 
+## Prerequisites
+
+vibetracker requires [Bun](https://bun.sh). Install it:
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
 ## Installation
 
-### As a Claude Code Plugin
+### Claude
+
+#### As a Plugin (Recommended)
 
 Add the vibetracker plugins marketplace:
 ```
@@ -16,14 +25,9 @@ Install the tracker plugin to automatically capture session data:
 /plugin install tracker
 ```
 
-### Manual Installation
+#### Manual Hook Configuration
 
-1. Install the package globally:
-```bash
-bun add -g vibetracker
-```
-
-2. Add hooks to your `~/.claude/settings.json`:
+Add hooks to your `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
@@ -49,6 +53,34 @@ bun add -g vibetracker
         ]
       }
     ]
+  }
+}
+```
+
+### Gemini
+
+Add hooks to your `~/.gemini/settings.json`:
+```json
+{
+  "hooks": {
+    "post_message": [
+      {
+        "command": "bunx vibetracker ingest --source gemini"
+      }
+    ]
+  }
+}
+```
+
+### Codex
+
+Add hooks to your `~/.codex/config.json`:
+```json
+{
+  "hooks": {
+    "on_response": {
+      "command": "bunx vibetracker ingest --source codex"
+    }
   }
 }
 ```
