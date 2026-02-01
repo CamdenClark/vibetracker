@@ -7,6 +7,79 @@ weight: 1
 
 Every event in Vibetracker follows the `VibeEvent` schema. This page documents all available fields.
 
+## Database Overview
+
+### Storage Location
+
+Vibetracker stores all events in a SQLite database at:
+
+```
+~/.vibetracker/events.db
+```
+
+### Table Structure
+
+All events are stored in a single `events` table. This is intentionally designed as a **wide table** similar to observability and analytics databases (like ClickHouse or TimescaleDB schemas). The wide table design allows you to:
+
+- Run complex analytical queries across all event types without joins
+- Filter and aggregate on any combination of fields
+- Easily export or sync data without reconstructing relationships
+
+### Schema Definition
+
+```sql
+CREATE TABLE `events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`timestamp` text NOT NULL,
+	`user_id` text NOT NULL,
+	`team_id` text,
+	`machine_id` text,
+	`session_id` text NOT NULL,
+	`event_type` text NOT NULL,
+	`source` text NOT NULL,
+	`session_cwd` text,
+	`session_git_repo` text,
+	`session_git_branch` text,
+	`session_duration_ms` integer,
+	`turn_index` integer,
+	`prompt_tokens` integer,
+	`completion_tokens` integer,
+	`total_tokens` integer,
+	`model` text,
+	`tool_name` text,
+	`tool_name_raw` text,
+	`tool_input` text,
+	`tool_output` text,
+	`tool_duration_ms` integer,
+	`tool_success` integer,
+	`mcp_server` text,
+	`mcp_tool_name` text,
+	`file_path` text,
+	`file_action` text,
+	`file_lines_added` integer,
+	`file_lines_removed` integer,
+	`bash_command` text,
+	`bash_command_output` text,
+	`error_message` text,
+	`error_code` text,
+	`prompt_text` text,
+	`agent_id` text,
+	`agent_type` text,
+	`meta` text,
+	`synced_at` text
+);
+
+CREATE UNIQUE INDEX `idx_events_dedup` ON `events` (`session_id`, `timestamp`, `event_type`, COALESCE(`tool_name_raw`, ''), COALESCE(`tool_input`, ''));
+CREATE INDEX `idx_events_timestamp` ON `events` (`timestamp`);
+CREATE INDEX `idx_events_session` ON `events` (`session_id`);
+CREATE INDEX `idx_events_synced` ON `events` (`synced_at`);
+CREATE INDEX `idx_events_agent` ON `events` (`agent_id`);
+```
+
+---
+
+## Field Reference
+
 ## Core Fields
 
 These fields are present on every event.
@@ -129,6 +202,15 @@ These fields provide details about file operations.
 | `file_action` | `string` | Action type: `create`, `update`, or `delete` |
 | `file_lines_added` | `number` | Number of lines added |
 | `file_lines_removed` | `number` | Number of lines removed |
+
+## Bash Execution Fields
+
+These fields capture shell command executions.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bash_command` | `string` | The shell command that was executed |
+| `bash_command_output` | `string` | Output from the command execution |
 
 ## Error Fields
 
