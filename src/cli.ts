@@ -168,26 +168,28 @@ async function main() {
     }
   } else if (command === 'status') {
     const { getDb } = await import('./db')
+    const { events } = await import('./db/schema')
+    const { count, countDistinct, isNull } = await import('drizzle-orm')
     const db = getDb()
 
-    const total = db.query('SELECT COUNT(*) as count FROM events').get() as { count: number }
-    const unsynced = db.query('SELECT COUNT(*) as count FROM events WHERE synced_at IS NULL').get() as { count: number }
-    const sessions = db.query('SELECT COUNT(DISTINCT session_id) as count FROM events').get() as { count: number }
+    const totalResult = db.select({ count: count() }).from(events).get()
+    const unsyncedResult = db.select({ count: count() }).from(events).where(isNull(events.synced_at)).get()
+    const sessionsResult = db.select({ count: countDistinct(events.session_id) }).from(events).get()
 
-    console.log(`Total events: ${total.count}`)
-    console.log(`Unsynced events: ${unsynced.count}`)
-    console.log(`Total sessions: ${sessions.count}`)
+    console.log(`Total events: ${totalResult?.count ?? 0}`)
+    console.log(`Unsynced events: ${unsyncedResult?.count ?? 0}`)
+    console.log(`Total sessions: ${sessionsResult?.count ?? 0}`)
   } else if (command === 'query') {
-    const sql = positionals[1]
-    if (!sql) {
+    const sqlQuery = positionals[1]
+    if (!sqlQuery) {
       console.error('Error: SQL query required')
       process.exit(1)
     }
 
-    const { getDb } = await import('./db')
-    const db = getDb()
+    const { getSqliteDb } = await import('./db')
+    const db = getSqliteDb()
 
-    const results = db.query(sql).all()
+    const results = db.query(sqlQuery).all()
     console.log(JSON.stringify(results, null, 2))
   } else {
     console.error(`Unknown command: ${command}`)

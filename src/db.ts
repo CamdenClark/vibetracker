@@ -1,88 +1,53 @@
 import { Database } from 'bun:sqlite'
+import { drizzle, BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
+import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { mkdirSync } from 'fs'
-import { dirname } from 'path'
+import { dirname, join } from 'path'
+import { sql } from 'drizzle-orm'
 import type { VibeEvent } from './schema'
-import { getDbPath } from './config'
+import { getDbPath, getConfigDir } from './config'
+import * as schema from './db/schema'
 
-let db: Database | null = null
+let db: BunSQLiteDatabase<typeof schema> | null = null
+let sqliteDb: Database | null = null
 
-export function getDb(): Database {
+export function getDb(): BunSQLiteDatabase<typeof schema> {
   if (db) return db
 
   const dbPath = getDbPath()
   mkdirSync(dirname(dbPath), { recursive: true })
 
-  db = new Database(dbPath)
-  db.exec('PRAGMA journal_mode = WAL')
-  initSchema(db)
+  sqliteDb = new Database(dbPath)
+  sqliteDb.exec('PRAGMA journal_mode = WAL')
+
+  db = drizzle(sqliteDb, { schema })
+
+  // Run migrations automatically
+  const migrationsFolder = join(import.meta.dir, 'db', 'migrations')
+  try {
+    migrate(db, { migrationsFolder })
+  } catch (e) {
+    // Migrations folder may not exist on first run before any migrations are generated
+    if (!(e instanceof Error && e.message.includes('ENOENT'))) {
+      throw e
+    }
+  }
 
   return db
 }
 
-function initSchema(db: Database): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS events (
-      id TEXT PRIMARY KEY,
-      timestamp TEXT NOT NULL,
-      user_id TEXT NOT NULL,
-      team_id TEXT,
-      machine_id TEXT,
-      session_id TEXT NOT NULL,
-      event_type TEXT NOT NULL,
-      source TEXT NOT NULL,
-
-      session_cwd TEXT,
-      session_git_repo TEXT,
-      session_git_branch TEXT,
-      session_duration_ms INTEGER,
-
-      turn_index INTEGER,
-      prompt_tokens INTEGER,
-      completion_tokens INTEGER,
-      total_tokens INTEGER,
-      model TEXT,
-
-      tool_name TEXT,
-      tool_name_raw TEXT,
-      tool_input TEXT,
-      tool_output TEXT,
-      tool_duration_ms INTEGER,
-      tool_success INTEGER,
-
-      mcp_server TEXT,
-      mcp_tool_name TEXT,
-
-      file_path TEXT,
-      file_action TEXT,
-      file_lines_added INTEGER,
-      file_lines_removed INTEGER,
-
-      error_message TEXT,
-      error_code TEXT,
-
-      prompt_text TEXT,
-
-      agent_id TEXT,
-      agent_type TEXT,
-
-      meta TEXT,
-      synced_at TEXT
-    );
-
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_events_dedup
-    ON events(session_id, timestamp, event_type, COALESCE(tool_name_raw, ''), COALESCE(tool_input, ''));
-
-    CREATE INDEX IF NOT EXISTS idx_events_timestamp ON events(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
-    CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced_at);
-    CREATE INDEX IF NOT EXISTS idx_events_agent ON events(agent_id);
-  `)
+export function getSqliteDb(): Database {
+  if (!sqliteDb) {
+    getDb() // Initialize if not already done
+  }
+  return sqliteDb!
 }
 
 export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: number } {
   const db = getDb()
+  const sqliteDb = getSqliteDb()
 
-  const insert = db.prepare(`
+  const insert = sqliteDb.prepare(`
     INSERT OR IGNORE INTO events (
       id, timestamp, user_id, team_id, machine_id, session_id, event_type, source,
       session_cwd, session_git_repo, session_git_branch, session_duration_ms,
@@ -110,7 +75,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
 
   let inserted = 0
 
-  const tx = db.transaction(() => {
+  const tx = sqliteDb.transaction(() => {
     for (const event of events) {
       const result = insert.run({
         $id: event.id,
