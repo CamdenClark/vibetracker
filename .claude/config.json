@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun:*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git fetch*)",
+      "Bash(git checkout*)",
+      "Bash(gh pr*)",
+      "Bash(gh api*)",
+      "Bash(sqlite3*)",
+      "Read(./**/*)",
+      "Edit(./**/*)",
+      "Write(./**/*)"
+    ]
+  }
+}
