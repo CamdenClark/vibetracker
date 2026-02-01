@@ -22,6 +22,7 @@ export interface ParsedEvent {
   tool_name?: ToolName  // Normalized tool name
   tool_name_raw?: string
   tool_input?: string
+  tool_output?: string
 
   // File operation data
   file_path?: string

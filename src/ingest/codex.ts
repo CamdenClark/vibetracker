@@ -241,8 +241,8 @@ export async function parseCodexTranscript(
 
   // Track function calls awaiting output by call_id
   const pendingFunctionCalls = new Map<string, { name: string; args: Record<string, unknown> }>()
-  // Track bash outputs by call_id
-  const bashOutputs = new Map<string, string>()
+  // Track tool outputs by call_id
+  const toolOutputs = new Map<string, string>()
 
   const flushTurn = () => {
     if (currentTurnTimestamp && sessionId && hasPendingAssistantMessage) {
@@ -263,8 +263,8 @@ export async function parseCodexTranscript(
 
       // Add tool calls for this turn
       for (const tool of currentTurnToolCalls) {
-        // Check if we have bash output for this call
-        const bashOutput = bashOutputs.get(tool.callId)
+        // Get the tool output for this call
+        const toolOutput = toolOutputs.get(tool.callId)
         events.push(createParsedEvent({
           timestamp: tool.timestamp,
           session_id: sessionId,
@@ -273,6 +273,7 @@ export async function parseCodexTranscript(
           tool_name: normalizeToolName(tool.name),
           tool_name_raw: tool.name,
           tool_input: JSON.stringify(tool.args),
+          tool_output: toolOutput,
           file_path: tool.fileInfo.file_path,
           file_action: tool.fileInfo.file_action,
           file_lines_added: tool.fileInfo.file_lines_added,
@@ -281,7 +282,7 @@ export async function parseCodexTranscript(
           git_branch: sessionGitBranch,
           git_repo: sessionGitRepo,
           bash_command: tool.bashInfo.bash_command,
-          bash_command_output: bashOutput ?? tool.bashInfo.bash_command_output,
+          bash_command_output: tool.name === 'shell_command' ? toolOutput : undefined,
         }))
       }
     }
@@ -378,11 +379,10 @@ export async function parseCodexTranscript(
         currentTurnTimestamp = entry.timestamp
         hasPendingAssistantMessage = true
       } else if (item.payload.type === 'function_call_output') {
-        // Tool output received - capture bash output if this was a shell_command
+        // Tool output received - capture for all tools
         const callId = item.payload.call_id ?? ''
-        const pendingCall = pendingFunctionCalls.get(callId)
-        if (pendingCall?.name === 'shell_command' && item.payload.output) {
-          bashOutputs.set(callId, item.payload.output)
+        if (item.payload.output) {
+          toolOutputs.set(callId, item.payload.output)
         }
         pendingFunctionCalls.delete(callId)
       } else if (item.payload.type === 'message' && item.payload.role === 'assistant') {
@@ -438,9 +438,10 @@ function createParsedEvent(params: {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
-  tool_name?: string
+  tool_name?: ToolName
   tool_name_raw?: string
   tool_input?: string
+  tool_output?: string
   file_path?: string
   file_action?: 'create' | 'update' | 'delete'
   file_lines_added?: number
@@ -461,8 +462,10 @@ function createParsedEvent(params: {
     prompt_tokens: params.prompt_tokens,
     completion_tokens: params.completion_tokens,
     total_tokens: params.total_tokens,
+    tool_name: params.tool_name,
     tool_name_raw: params.tool_name_raw,
     tool_input: params.tool_input,
+    tool_output: params.tool_output,
     file_path: params.file_path,
     file_action: params.file_action,
     file_lines_added: params.file_lines_added,

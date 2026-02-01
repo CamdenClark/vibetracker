@@ -43,6 +43,7 @@ function mapEventToVibeEvent(
     tool_name: event.tool_name,
     tool_name_raw: event.tool_name_raw,
     tool_input: event.tool_input,
+    tool_output: event.tool_output,
 
     file_path: event.file_path,
     file_action: event.file_action,
