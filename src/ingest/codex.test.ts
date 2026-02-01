@@ -290,6 +290,259 @@ describe('parseCodexTranscript', () => {
     expect(toolCall!.bash_command_output).toBe('On branch main\nnothing to commit, working tree clean')
   })
 
+  test('normalizes tool_name from shell_command to bash', async () => {
+    const transcriptPath = join(tempDir, 'tool-name-normalize.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-normalize', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'list files' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'shell_command',
+          arguments: '{"command":"ls -la","workdir":"/home/user/project"}',
+          call_id: 'call_ls',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'Here are the files.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name).toBe('bash')
+    expect(toolCall!.tool_name_raw).toBe('shell_command')
+  })
+
+  test('normalizes tool_name for file operations', async () => {
+    const transcriptPath = join(tempDir, 'tool-name-file-ops.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-file-ops', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'read and write files' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'read_file',
+          arguments: '{"path":"/home/user/project/test.ts"}',
+          call_id: 'call_read',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:13.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'write_file',
+          arguments: '{"path":"/home/user/project/output.ts","content":"test"}',
+          call_id: 'call_write',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:14.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'patch_file',
+          arguments: '{"path":"/home/user/project/patch.ts"}',
+          call_id: 'call_patch',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:15.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'delete_file',
+          arguments: '{"path":"/home/user/project/delete.ts"}',
+          call_id: 'call_delete',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'Done with file operations.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCalls = result.events.filter((e) => e.event_type === 'tool_call')
+    expect(toolCalls.length).toBe(4)
+
+    const readCall = toolCalls.find((t) => t.tool_name_raw === 'read_file')
+    expect(readCall!.tool_name).toBe('file_read')
+
+    const writeCall = toolCalls.find((t) => t.tool_name_raw === 'write_file')
+    expect(writeCall!.tool_name).toBe('file_write')
+
+    const patchCall = toolCalls.find((t) => t.tool_name_raw === 'patch_file')
+    expect(patchCall!.tool_name).toBe('file_edit')
+
+    const deleteCall = toolCalls.find((t) => t.tool_name_raw === 'delete_file')
+    expect(deleteCall!.tool_name).toBe('file_delete')
+  })
+
+  test('captures tool_output for all tool calls', async () => {
+    const transcriptPath = join(tempDir, 'tool-output.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-output', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'read a file' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'read_file',
+          arguments: '{"path":"/home/user/project/test.ts"}',
+          call_id: 'call_read_file',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:13.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call_output',
+          call_id: 'call_read_file',
+          output: 'const x = 1;\nconsole.log(x);',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'Here is the file content.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name).toBe('file_read')
+    expect(toolCall!.tool_output).toBe('const x = 1;\nconsole.log(x);')
+    // bash_command_output should be undefined for non-shell commands
+    expect(toolCall!.bash_command_output).toBeUndefined()
+  })
+
+  test('captures tool_output for shell_command and sets bash_command_output', async () => {
+    const transcriptPath = join(tempDir, 'shell-tool-output.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-shell-output', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'run pwd' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'shell_command',
+          arguments: '{"command":"pwd","workdir":"/home/user/project"}',
+          call_id: 'call_pwd',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:13.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call_output',
+          call_id: 'call_pwd',
+          output: '/home/user/project',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'You are in /home/user/project.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name).toBe('bash')
+    expect(toolCall!.bash_command).toBe('pwd')
+    // Both tool_output and bash_command_output should be set for shell_command
+    expect(toolCall!.tool_output).toBe('/home/user/project')
+    expect(toolCall!.bash_command_output).toBe('/home/user/project')
+  })
+
+  test('normalizes unknown tools to other', async () => {
+    const transcriptPath = join(tempDir, 'unknown-tool.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-unknown', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'use custom tool' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'custom_unknown_tool',
+          arguments: '{"arg":"value"}',
+          call_id: 'call_custom',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'Used custom tool.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name).toBe('other')
+    expect(toolCall!.tool_name_raw).toBe('custom_unknown_tool')
+  })
+
   test('handles interrupted turn (turn_aborted)', async () => {
     const transcriptPath = join(tempDir, 'interrupted.jsonl')
     const entries = [
