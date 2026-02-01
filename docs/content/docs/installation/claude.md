@@ -29,12 +29,6 @@ That's it! The plugin will automatically capture session data.
 
 If you prefer manual setup, you can configure hooks directly.
 
-### Install the Package
-
-```bash
-bun add -g vibetracker
-```
-
 ### Configure Hooks
 
 Add the following to your `~/.claude/settings.json`:
