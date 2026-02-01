@@ -19,12 +19,6 @@ This adds the AfterAgent hook to `~/.gemini/settings.json`.
 
 ## Manual Installation
 
-### Install the Package
-
-```bash
-bun add -g vibetracker
-```
-
 ### Configure Hooks
 
 Add the following to your `~/.gemini/settings.json`:
