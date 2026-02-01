@@ -8,7 +8,7 @@ Analytics for agentic coding sessions. Track tokens, tools, errors, and more acr
 
 Add the vibetracker plugins marketplace:
 ```
-/plugin marketplace add camdenclark/vibetracker-plugins
+/plugin marketplace add camdenclark/vibetracker
 ```
 
 Install the tracker plugin to automatically capture session data:
@@ -87,6 +87,15 @@ FROM events GROUP BY source
 ## Data Storage
 
 Events are stored locally in `~/.vibetracker/events.db` (SQLite).
+
+## Plugins
+
+This repository includes plugins for agentic coding tools in the `plugins/` directory:
+
+### Claude Code Plugins (`plugins/claude/`)
+
+- **tracker** - Automatically captures session events to your local vibetracker database
+- **analysis** - Analysis tools for vibetracker data, including `/permissions` to generate `.claude/config.json`
 
 ## Development
 

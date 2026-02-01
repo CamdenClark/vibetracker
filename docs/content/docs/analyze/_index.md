@@ -12,7 +12,7 @@ Vibetracker includes analysis plugins that help you understand your coding sessi
 First, ensure you have the Vibetracker plugin marketplace added:
 
 ```bash
-/plugin marketplace add camdenclark/vibetracker-plugins
+/plugin marketplace add camdenclark/vibetracker
 ```
 
 Then install the analysis plugin:

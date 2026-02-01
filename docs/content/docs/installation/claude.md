@@ -14,7 +14,7 @@ The easiest way to install Vibetracker is through the Claude Code plugin system.
 ### Add the Plugin Marketplace
 
 ```bash
-/plugin marketplace add camdenclark/vibetracker-plugins
+/plugin marketplace add camdenclark/vibetracker
 ```
 
 ### Install the Tracker Plugin

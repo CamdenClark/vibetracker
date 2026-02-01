@@ -24,7 +24,7 @@ The fastest way to get started is with [Claude Code](https://claude.ai/code). In
 
 ```bash
 # Add the plugin marketplace
-/plugin marketplace add camdenclark/vibetracker-plugins
+/plugin marketplace add camdenclark/vibetracker
 
 # Install the tracker plugin
 /plugin install tracker

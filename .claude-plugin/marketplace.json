@@ -1,0 +1,21 @@
+{
+  "name": "vibetracker-plugins",
+  "description": "Plugins for vibetracker - analytics for agentic coding sessions",
+  "owner": {
+    "name": "Camden Clark"
+  },
+  "plugins": [
+    {
+      "name": "tracker",
+      "source": "./plugins/claude/tracker",
+      "description": "Capture session events to your local vibetracker database",
+      "version": "0.1.0"
+    },
+    {
+      "name": "analysis",
+      "source": "./plugins/claude/analysis",
+      "description": "Analysis tools for vibetracker data and development workflows",
+      "version": "0.1.0"
+    }
+  ]
+}
