@@ -54,7 +54,6 @@ export interface VibeEvent {
   tool_name_raw?: string
   tool_input?: string
   tool_output?: string
-  tool_duration_ms?: number
   tool_success?: boolean
 
   mcp_server?: string

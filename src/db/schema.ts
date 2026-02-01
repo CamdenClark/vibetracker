@@ -24,7 +24,6 @@ export const events = sqliteTable('events', {
   tool_name_raw: text('tool_name_raw'),
   tool_input: text('tool_input'),
   tool_output: text('tool_output'),
-  tool_duration_ms: integer('tool_duration_ms'),
   tool_success: integer('tool_success'),
 
   mcp_server: text('mcp_server'),
