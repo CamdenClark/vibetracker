@@ -15,6 +15,13 @@
       "when": 1769910147641,
       "tag": "0001_silly_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1769914156450,
+      "tag": "0002_drop_session_duration_ms",
+      "breakpoints": true
     }
   ]
 }
