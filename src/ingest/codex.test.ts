@@ -242,6 +242,54 @@ describe('parseCodexTranscript', () => {
     expect(input.command).toBe('lsof -nP -iTCP -sTCP:LISTEN')
   })
 
+  test('extracts bash_command and bash_command_output from shell_command', async () => {
+    const transcriptPath = join(tempDir, 'bash-command.jsonl')
+    const entries = [
+      {
+        timestamp: '2025-11-22T19:15:45.744Z',
+        type: 'session_meta',
+        payload: { id: 'sess-bash', cwd: '/home/user/project' },
+      },
+      {
+        timestamp: '2025-11-22T19:17:47.476Z',
+        type: 'event_msg',
+        payload: { type: 'user_message', message: 'check git status' },
+      },
+      {
+        timestamp: '2025-11-22T19:22:12.455Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'shell_command',
+          arguments: '{"command":"git status","workdir":"/home/user/project"}',
+          call_id: 'call_git_status',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:13.000Z',
+        type: 'response_item',
+        payload: {
+          type: 'function_call_output',
+          call_id: 'call_git_status',
+          output: 'On branch main\nnothing to commit, working tree clean',
+        },
+      },
+      {
+        timestamp: '2025-11-22T19:22:30.804Z',
+        type: 'event_msg',
+        payload: { type: 'agent_message', message: 'Your git status is clean.' },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseCodexTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name_raw).toBe('shell_command')
+    expect(toolCall!.bash_command).toBe('git status')
+    expect(toolCall!.bash_command_output).toBe('On branch main\nnothing to commit, working tree clean')
+  })
+
   test('handles interrupted turn (turn_aborted)', async () => {
     const transcriptPath = join(tempDir, 'interrupted.jsonl')
     const entries = [

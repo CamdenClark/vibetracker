@@ -221,6 +221,46 @@ describe('parseGeminiTranscript', () => {
     expect(toolCall!.file_path).toBe('/home/user/project')
   })
 
+  test('extracts bash_command and bash_command_output from run_shell_command', async () => {
+    const transcriptPath = join(tempDir, 'bash-command.json')
+    await Bun.write(transcriptPath, JSON.stringify({
+      sessionId: 'session-bash',
+      projectHash: 'abc123',
+      startTime: '2025-01-15T10:00:00Z',
+      lastUpdated: '2025-01-15T10:02:00Z',
+      messages: [
+        {
+          type: 'user',
+          content: 'Check git status',
+          timestamp: '2025-01-15T10:00:30Z',
+        },
+        {
+          type: 'gemini',
+          content: 'Your working tree is clean.',
+          model: 'gemini-2.0-flash-001',
+          toolCalls: [
+            {
+              id: 'tool-1',
+              name: 'run_shell_command',
+              args: { command: 'git status', directory: '/home/user/project' },
+              result: [{ functionResponse: { output: 'On branch main\nnothing to commit, working tree clean' } }],
+              status: 'success',
+              timestamp: '2025-01-15T10:00:45Z',
+            },
+          ],
+          timestamp: '2025-01-15T10:01:00Z',
+        },
+      ],
+    }))
+
+    const result = await parseGeminiTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name_raw).toBe('run_shell_command')
+    expect(toolCall!.bash_command).toBe('git status')
+    expect(toolCall!.bash_command_output).toBe('On branch main\nnothing to commit, working tree clean')
+  })
+
   test('parses write_file tool', async () => {
     const transcriptPath = join(tempDir, 'write-file.json')
     await Bun.write(transcriptPath, JSON.stringify({
