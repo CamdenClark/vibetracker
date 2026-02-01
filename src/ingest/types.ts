@@ -1,4 +1,4 @@
-import type { EventType, AgentSource } from '../schema'
+import type { EventType, AgentSource, ToolName } from '../schema'
 
 // Parsed event from any source (no identity fields)
 export interface ParsedEvent {
@@ -19,7 +19,7 @@ export interface ParsedEvent {
   total_tokens?: number
 
   // Tool data
-  tool_name?: string  // Normalized tool name
+  tool_name?: ToolName  // Normalized tool name
   tool_name_raw?: string
   tool_input?: string
 
