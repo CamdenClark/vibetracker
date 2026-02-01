@@ -1,6 +1,6 @@
 {
   "name": "vibetracker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Analytics for agentic coding sessions - track tokens, tools, errors, and more",
   "module": "src/cli.ts",
   "type": "module",
