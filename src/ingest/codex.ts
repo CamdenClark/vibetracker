@@ -1,5 +1,5 @@
 import type { ParsedTranscript, ParsedEvent } from './types'
-import type { EventType } from '../schema'
+import type { EventType, ToolName } from '../schema'
 import { parseGitRepoFromUrl } from '../cache'
 
 // Hook payload sent by Codex CLI
@@ -252,6 +252,7 @@ export async function parseCodexTranscript(
           session_id: sessionId,
           event_type: 'tool_call',
           turn_index: turnIndex,
+          tool_name: normalizeToolName(tool.name),
           tool_name_raw: tool.name,
           tool_input: JSON.stringify(tool.args),
           file_path: tool.fileInfo.file_path,
@@ -412,6 +413,7 @@ function createParsedEvent(params: {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
+  tool_name?: string
   tool_name_raw?: string
   tool_input?: string
   file_path?: string
@@ -440,4 +442,21 @@ function createParsedEvent(params: {
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
   }
+}
+
+const CODEX_TOOL_MAP: Record<string, ToolName> = {
+  shell_command: 'bash',
+  read_file: 'file_read',
+  write_file: 'file_write',
+  patch_file: 'file_edit',
+  delete_file: 'file_delete',
+  grep: 'grep',
+  glob: 'glob',
+  list_dir: 'list_dir',
+  web_fetch: 'web_fetch',
+  web_search: 'web_search',
+}
+
+export function normalizeToolName(rawName: string): ToolName {
+  return CODEX_TOOL_MAP[rawName] ?? 'other'
 }

@@ -1,5 +1,5 @@
 import type { ParsedTranscript, ParsedEvent } from './types'
-import type { EventType } from '../schema'
+import type { EventType, ToolName } from '../schema'
 
 interface ClaudeHookPayload {
   session_id: string
@@ -156,6 +156,7 @@ export async function parseClaudeTranscript(
           session_id: sessionId,
           event_type: 'tool_call',
           turn_index: turnIndex,
+          tool_name: normalizeToolName(tool.name),
           tool_name_raw: tool.name,
           tool_input: JSON.stringify(tool.input),
           file_path: tool.fileInfo.file_path,
@@ -273,6 +274,7 @@ function createParsedEvent(params: {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
+  tool_name?: string
   tool_name_raw?: string
   tool_input?: string
   file_path?: string
@@ -406,6 +408,7 @@ export async function parseClaudeSubagentTranscript(
                 session_id: payload.session_id,
                 event_type: 'tool_call',
                 turn_index: turnIndex,
+                tool_name: normalizeToolName(toolBlock.name),
                 tool_name_raw: toolBlock.name,
                 tool_input: JSON.stringify(toolBlock.input),
                 file_path: fileInfo.file_path,
@@ -479,4 +482,22 @@ async function extractAgentTypeFromParentTranscript(
   }
 
   return undefined
+}
+
+const CLAUDE_TOOL_MAP: Record<string, ToolName> = {
+  Bash: 'bash',
+  Read: 'file_read',
+  Write: 'file_write',
+  Edit: 'file_edit',
+  MultiEdit: 'file_edit',
+  Grep: 'grep',
+  Glob: 'glob',
+  ListDir: 'list_dir',
+  WebFetch: 'web_fetch',
+  WebSearch: 'web_search',
+  Task: 'task',
+}
+
+export function normalizeToolName(rawName: string): ToolName {
+  return CLAUDE_TOOL_MAP[rawName] ?? 'other'
 }

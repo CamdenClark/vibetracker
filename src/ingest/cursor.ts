@@ -1,5 +1,5 @@
 import type { ParsedTranscript, ParsedEvent } from './types'
-import type { EventType } from '../schema'
+import type { EventType, ToolName } from '../schema'
 import { homedir } from 'os'
 import { join } from 'path'
 
@@ -178,6 +178,7 @@ export async function parseCursorTranscript(
           session_id: sessionId,
           event_type: 'tool_call',
           turn_index: turnIndex,
+          tool_name: normalizeToolName(tool.name),
           tool_name_raw: tool.name,
           tool_input: JSON.stringify(tool.input),
           file_path: tool.fileInfo.file_path,
@@ -284,6 +285,7 @@ function createParsedEvent(params: {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
+  tool_name?: string
   tool_name_raw?: string
   tool_input?: string
   file_path?: string
@@ -311,4 +313,34 @@ function createParsedEvent(params: {
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
   }
+}
+
+// Cursor uses a mix of Claude-style and custom tool names
+const CURSOR_TOOL_MAP: Record<string, ToolName> = {
+  // Claude-style names
+  Bash: 'bash',
+  Read: 'file_read',
+  Write: 'file_write',
+  Edit: 'file_edit',
+  MultiEdit: 'file_edit',
+  Grep: 'grep',
+  Glob: 'glob',
+  ListDir: 'list_dir',
+  WebFetch: 'web_fetch',
+  WebSearch: 'web_search',
+  Task: 'task',
+  // Cursor-specific names
+  read_file: 'file_read',
+  write_file: 'file_write',
+  edit_file: 'file_edit',
+  run_terminal_command: 'bash',
+  terminal: 'bash',
+  search_files: 'grep',
+  list_directory: 'list_dir',
+  codebase_search: 'grep',
+  file_search: 'glob',
+}
+
+export function normalizeToolName(rawName: string): ToolName {
+  return CURSOR_TOOL_MAP[rawName] ?? 'other'
 }

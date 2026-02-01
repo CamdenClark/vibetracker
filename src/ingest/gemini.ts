@@ -1,5 +1,5 @@
 import type { ParsedTranscript, ParsedEvent } from './types'
-import type { EventType } from '../schema'
+import type { EventType, ToolName } from '../schema'
 
 // Hook payload sent by Gemini CLI
 export interface GeminiHookPayload {
@@ -287,6 +287,7 @@ export async function parseGeminiTranscript(
             session_id: sessionId,
             event_type: 'tool_call',
             turn_index: turnIndex,
+            tool_name: normalizeToolName(toolCall.name),
             tool_name_raw: toolCall.name,
             tool_input: JSON.stringify(toolCall.args),
             file_path: fileInfo.file_path,
@@ -347,6 +348,7 @@ function createParsedEvent(params: {
   prompt_tokens?: number
   completion_tokens?: number
   total_tokens?: number
+  tool_name?: string
   tool_name_raw?: string
   tool_input?: string
   file_path?: string
@@ -374,4 +376,21 @@ function createParsedEvent(params: {
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
   }
+}
+
+const GEMINI_TOOL_MAP: Record<string, ToolName> = {
+  run_shell_command: 'bash',
+  read_file: 'file_read',
+  write_file: 'file_write',
+  replace: 'file_edit',
+  search_file_content: 'grep',
+  glob: 'glob',
+  list_directory: 'list_dir',
+  web_fetch: 'web_fetch',
+  google_web_search: 'web_search',
+  delegate_to_agent: 'task',
+}
+
+export function normalizeToolName(rawName: string): ToolName {
+  return GEMINI_TOOL_MAP[rawName] ?? 'other'
 }

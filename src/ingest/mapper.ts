@@ -1,7 +1,6 @@
 import type { VibeEvent } from '../schema'
 import type { Config } from '../config'
 import type { ParsedTranscript, ParsedEvent } from './types'
-import { normalizeToolName } from '../normalize'
 import { getGitRepo } from '../cache'
 
 export async function mapToVibeEvents(parsed: ParsedTranscript, config: Config): Promise<VibeEvent[]> {
@@ -41,9 +40,7 @@ function mapEventToVibeEvent(
     completion_tokens: event.completion_tokens,
     total_tokens: event.total_tokens,
 
-    tool_name: event.tool_name_raw
-      ? normalizeToolName(event.tool_name_raw, source)
-      : undefined,
+    tool_name: event.tool_name,
     tool_name_raw: event.tool_name_raw,
     tool_input: event.tool_input,
 

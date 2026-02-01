@@ -1,84 +1,120 @@
 import { test, expect, describe } from 'bun:test'
-import { normalizeToolName } from './normalize'
+import { normalizeToolName as normalizeClaudeToolName } from './ingest/claude'
+import { normalizeToolName as normalizeCodexToolName } from './ingest/codex'
+import { normalizeToolName as normalizeCursorToolName } from './ingest/cursor'
+import { normalizeToolName as normalizeGeminiToolName } from './ingest/gemini'
 
 describe('normalizeToolName', () => {
-  describe('claude_code source', () => {
+  describe('claude', () => {
     test('normalizes Bash to bash', () => {
-      expect(normalizeToolName('Bash', 'claude_code')).toBe('bash')
+      expect(normalizeClaudeToolName('Bash')).toBe('bash')
     })
 
     test('normalizes Read to file_read', () => {
-      expect(normalizeToolName('Read', 'claude_code')).toBe('file_read')
+      expect(normalizeClaudeToolName('Read')).toBe('file_read')
     })
 
     test('normalizes Write to file_write', () => {
-      expect(normalizeToolName('Write', 'claude_code')).toBe('file_write')
+      expect(normalizeClaudeToolName('Write')).toBe('file_write')
     })
 
     test('normalizes Edit to file_edit', () => {
-      expect(normalizeToolName('Edit', 'claude_code')).toBe('file_edit')
+      expect(normalizeClaudeToolName('Edit')).toBe('file_edit')
     })
 
     test('normalizes MultiEdit to file_edit', () => {
-      expect(normalizeToolName('MultiEdit', 'claude_code')).toBe('file_edit')
+      expect(normalizeClaudeToolName('MultiEdit')).toBe('file_edit')
     })
 
     test('normalizes Grep to grep', () => {
-      expect(normalizeToolName('Grep', 'claude_code')).toBe('grep')
+      expect(normalizeClaudeToolName('Grep')).toBe('grep')
     })
 
     test('normalizes Glob to glob', () => {
-      expect(normalizeToolName('Glob', 'claude_code')).toBe('glob')
+      expect(normalizeClaudeToolName('Glob')).toBe('glob')
     })
 
     test('normalizes ListDir to list_dir', () => {
-      expect(normalizeToolName('ListDir', 'claude_code')).toBe('list_dir')
+      expect(normalizeClaudeToolName('ListDir')).toBe('list_dir')
     })
 
     test('normalizes WebFetch to web_fetch', () => {
-      expect(normalizeToolName('WebFetch', 'claude_code')).toBe('web_fetch')
+      expect(normalizeClaudeToolName('WebFetch')).toBe('web_fetch')
     })
 
     test('normalizes WebSearch to web_search', () => {
-      expect(normalizeToolName('WebSearch', 'claude_code')).toBe('web_search')
+      expect(normalizeClaudeToolName('WebSearch')).toBe('web_search')
     })
 
     test('normalizes Task to task', () => {
-      expect(normalizeToolName('Task', 'claude_code')).toBe('task')
+      expect(normalizeClaudeToolName('Task')).toBe('task')
     })
 
     test('returns other for unknown tool names', () => {
-      expect(normalizeToolName('UnknownTool', 'claude_code')).toBe('other')
-      expect(normalizeToolName('FooBar', 'claude_code')).toBe('other')
-      expect(normalizeToolName('', 'claude_code')).toBe('other')
+      expect(normalizeClaudeToolName('UnknownTool')).toBe('other')
+      expect(normalizeClaudeToolName('FooBar')).toBe('other')
+      expect(normalizeClaudeToolName('')).toBe('other')
     })
   })
 
-  describe('cursor source', () => {
+  describe('codex', () => {
+    test('normalizes known tool names', () => {
+      expect(normalizeCodexToolName('shell_command')).toBe('bash')
+      expect(normalizeCodexToolName('read_file')).toBe('file_read')
+      expect(normalizeCodexToolName('write_file')).toBe('file_write')
+      expect(normalizeCodexToolName('patch_file')).toBe('file_edit')
+      expect(normalizeCodexToolName('delete_file')).toBe('file_delete')
+      expect(normalizeCodexToolName('grep')).toBe('grep')
+      expect(normalizeCodexToolName('glob')).toBe('glob')
+      expect(normalizeCodexToolName('list_dir')).toBe('list_dir')
+      expect(normalizeCodexToolName('web_fetch')).toBe('web_fetch')
+      expect(normalizeCodexToolName('web_search')).toBe('web_search')
+    })
+
+    test('returns other for unknown tool names', () => {
+      expect(normalizeCodexToolName('Bash')).toBe('other')
+      expect(normalizeCodexToolName('UnknownTool')).toBe('other')
+    })
+  })
+
+  describe('cursor', () => {
     test('normalizes Claude-style names', () => {
-      expect(normalizeToolName('Bash', 'cursor')).toBe('bash')
-      expect(normalizeToolName('Read', 'cursor')).toBe('file_read')
-      expect(normalizeToolName('Write', 'cursor')).toBe('file_write')
-      expect(normalizeToolName('Edit', 'cursor')).toBe('file_edit')
+      expect(normalizeCursorToolName('Bash')).toBe('bash')
+      expect(normalizeCursorToolName('Read')).toBe('file_read')
+      expect(normalizeCursorToolName('Write')).toBe('file_write')
+      expect(normalizeCursorToolName('Edit')).toBe('file_edit')
     })
 
     test('normalizes Cursor-specific names', () => {
-      expect(normalizeToolName('read_file', 'cursor')).toBe('file_read')
-      expect(normalizeToolName('write_file', 'cursor')).toBe('file_write')
-      expect(normalizeToolName('run_terminal_command', 'cursor')).toBe('bash')
-      expect(normalizeToolName('codebase_search', 'cursor')).toBe('grep')
+      expect(normalizeCursorToolName('read_file')).toBe('file_read')
+      expect(normalizeCursorToolName('write_file')).toBe('file_write')
+      expect(normalizeCursorToolName('run_terminal_command')).toBe('bash')
+      expect(normalizeCursorToolName('codebase_search')).toBe('grep')
     })
 
     test('returns other for unknown tool names', () => {
-      expect(normalizeToolName('UnknownTool', 'cursor')).toBe('other')
+      expect(normalizeCursorToolName('UnknownTool')).toBe('other')
     })
   })
 
-  describe('other sources', () => {
-    test('returns other for unsupported sources', () => {
-      expect(normalizeToolName('Bash', 'codex')).toBe('other')
-      expect(normalizeToolName('Write', 'opencode')).toBe('other')
-      expect(normalizeToolName('Anything', 'other')).toBe('other')
+  describe('gemini', () => {
+    test('normalizes known tool names', () => {
+      expect(normalizeGeminiToolName('run_shell_command')).toBe('bash')
+      expect(normalizeGeminiToolName('read_file')).toBe('file_read')
+      expect(normalizeGeminiToolName('write_file')).toBe('file_write')
+      expect(normalizeGeminiToolName('replace')).toBe('file_edit')
+      expect(normalizeGeminiToolName('search_file_content')).toBe('grep')
+      expect(normalizeGeminiToolName('glob')).toBe('glob')
+      expect(normalizeGeminiToolName('list_directory')).toBe('list_dir')
+      expect(normalizeGeminiToolName('web_fetch')).toBe('web_fetch')
+      expect(normalizeGeminiToolName('google_web_search')).toBe('web_search')
+      expect(normalizeGeminiToolName('delegate_to_agent')).toBe('task')
+    })
+
+    test('returns other for unknown tool names', () => {
+      expect(normalizeGeminiToolName('Bash')).toBe('other')
+      expect(normalizeGeminiToolName('UnknownTool')).toBe('other')
     })
   })
 })
+
