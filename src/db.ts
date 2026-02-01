@@ -50,7 +50,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
   const insert = sqliteDb.prepare(`
     INSERT OR IGNORE INTO events (
       id, timestamp, user_id, team_id, machine_id, session_id, event_type, source,
-      session_cwd, session_git_repo, session_git_branch, session_duration_ms,
+      session_cwd, session_git_repo, session_git_branch,
       turn_index, prompt_tokens, completion_tokens, total_tokens, model,
       tool_name, tool_name_raw, tool_input, tool_output, tool_duration_ms, tool_success,
       mcp_server, mcp_tool_name,
@@ -61,7 +61,7 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
       meta, synced_at
     ) VALUES (
       $id, $timestamp, $user_id, $team_id, $machine_id, $session_id, $event_type, $source,
-      $session_cwd, $session_git_repo, $session_git_branch, $session_duration_ms,
+      $session_cwd, $session_git_repo, $session_git_branch,
       $turn_index, $prompt_tokens, $completion_tokens, $total_tokens, $model,
       $tool_name, $tool_name_raw, $tool_input, $tool_output, $tool_duration_ms, $tool_success,
       $mcp_server, $mcp_tool_name,
@@ -89,7 +89,6 @@ export function insertEvents(events: VibeEvent[]): { inserted: number; skipped: 
         $session_cwd: event.session_cwd ?? null,
         $session_git_repo: event.session_git_repo ?? null,
         $session_git_branch: event.session_git_branch ?? null,
-        $session_duration_ms: event.session_duration_ms ?? null,
         $turn_index: event.turn_index ?? null,
         $prompt_tokens: event.prompt_tokens ?? null,
         $completion_tokens: event.completion_tokens ?? null,

@@ -13,7 +13,6 @@ export const events = sqliteTable('events', {
   session_cwd: text('session_cwd'),
   session_git_repo: text('session_git_repo'),
   session_git_branch: text('session_git_branch'),
-  session_duration_ms: integer('session_duration_ms'),
 
   turn_index: integer('turn_index'),
   prompt_tokens: integer('prompt_tokens'),

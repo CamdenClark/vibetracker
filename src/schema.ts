@@ -43,7 +43,6 @@ export interface VibeEvent {
   session_cwd?: string
   session_git_repo?: string
   session_git_branch?: string
-  session_duration_ms?: number
 
   turn_index?: number
   prompt_tokens?: number

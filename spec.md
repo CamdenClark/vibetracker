@@ -51,7 +51,6 @@ interface VibeEvent {
   session_cwd?: string
   session_git_repo?: string
   session_git_branch?: string
-  session_duration_ms?: number
 
   // Turn fields
   turn_index?: number
