@@ -72,8 +72,9 @@ describe('parseClaudeHookPayload', () => {
     expect(payload.hook_event_name).toBe('Stop')
   })
 
-  test('throws on invalid JSON', async () => {
-    expect(parseClaudeHookPayload('not valid json')).rejects.toThrow()
+  test('returns null on invalid JSON', async () => {
+    const result = await parseClaudeHookPayload('not valid json')
+    expect(result).toBeNull()
   })
 })
 
