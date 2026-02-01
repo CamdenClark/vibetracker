@@ -16,13 +16,14 @@ describe('parseCodexHookPayload', () => {
     })
 
     const payload = await parseCodexHookPayload(stdin)
-    expect(payload.session_id).toBe('sess-123')
-    expect(payload.transcript_path).toBe('/path/to/transcript.jsonl')
-    expect(payload.cwd).toBe('/home/user/project')
+    expect(payload!.session_id).toBe('sess-123')
+    expect(payload!.transcript_path).toBe('/path/to/transcript.jsonl')
+    expect(payload!.cwd).toBe('/home/user/project')
   })
 
-  test('throws on invalid JSON', async () => {
-    expect(parseCodexHookPayload('not valid json')).rejects.toThrow()
+  test('returns null on invalid JSON', async () => {
+    const result = await parseCodexHookPayload('not valid json')
+    expect(result).toBeNull()
   })
 })
 

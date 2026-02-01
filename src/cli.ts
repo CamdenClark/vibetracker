@@ -97,6 +97,10 @@ async function main() {
         const stdin = await Bun.stdin.text()
         if (stdin.trim()) {
           hookPayload = await parseClaudeHookPayload(stdin)
+          // If parsing failed, exit gracefully (don't crash the hook)
+          if (!hookPayload) {
+            process.exit(0)
+          }
           transcriptPath = hookPayload.transcript_path
         }
       }
@@ -106,22 +110,31 @@ async function main() {
         process.exit(1)
       }
 
-      // Parse transcript into intermediate format
-      let parsed
-      if (hookPayload && isSubagentStopPayload(hookPayload)) {
-        // Handle SubagentStop hook - parse subagent transcript
-        parsed = await parseClaudeSubagentTranscript(hookPayload)
-      } else {
-        // Handle Stop hook or manual ingestion
-        parsed = await parseClaudeTranscript(transcriptPath, hookPayload)
+      try {
+        // Parse transcript into intermediate format
+        let parsed
+        if (hookPayload && isSubagentStopPayload(hookPayload)) {
+          // Handle SubagentStop hook - parse subagent transcript
+          parsed = await parseClaudeSubagentTranscript(hookPayload)
+        } else {
+          // Handle Stop hook or manual ingestion
+          parsed = await parseClaudeTranscript(transcriptPath, hookPayload ?? undefined)
+        }
+
+        // Map to VibeEvents
+        const events = await mapToVibeEvents(parsed, config)
+
+        // Store events
+        const { inserted, skipped } = insertEvents(events)
+        console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+      } catch {
+        // If running as a hook (stdin was provided), exit gracefully
+        // Otherwise, re-throw for manual invocations
+        if (!values.transcript) {
+          process.exit(0)
+        }
+        throw new Error('Failed to parse transcript')
       }
-
-      // Map to VibeEvents
-      const events = await mapToVibeEvents(parsed, config)
-
-      // Store events
-      const { inserted, skipped } = insertEvents(events)
-      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
     } else if (values.source === 'codex') {
       let transcriptPath = values.transcript
       let hookPayload
@@ -131,7 +144,10 @@ async function main() {
         const stdin = await Bun.stdin.text()
         if (stdin.trim()) {
           hookPayload = await parseCodexHookPayload(stdin)
-          transcriptPath = hookPayload.transcript_path
+          // If parsing failed, try finding transcript another way
+          if (hookPayload) {
+            transcriptPath = hookPayload.transcript_path
+          }
         }
       }
 
@@ -145,15 +161,23 @@ async function main() {
         process.exit(1)
       }
 
-      // Parse transcript into intermediate format
-      const parsed = await parseCodexTranscript(transcriptPath, hookPayload)
+      try {
+        // Parse transcript into intermediate format
+        const parsed = await parseCodexTranscript(transcriptPath, hookPayload ?? undefined)
 
-      // Map to VibeEvents
-      const events = await mapToVibeEvents(parsed, config)
+        // Map to VibeEvents
+        const events = await mapToVibeEvents(parsed, config)
 
-      // Store events
-      const { inserted, skipped } = insertEvents(events)
-      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+        // Store events
+        const { inserted, skipped } = insertEvents(events)
+        console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+      } catch {
+        // If running as a hook (stdin was provided), exit gracefully
+        if (!values.transcript) {
+          process.exit(0)
+        }
+        throw new Error('Failed to parse transcript')
+      }
     } else if (values.source === 'gemini') {
       let transcriptPath = values.transcript
       let hookPayload
@@ -163,7 +187,10 @@ async function main() {
         const stdin = await Bun.stdin.text()
         if (stdin.trim()) {
           hookPayload = await parseGeminiHookPayload(stdin)
-          transcriptPath = hookPayload.transcript_path
+          // If parsing failed, try finding transcript another way
+          if (hookPayload) {
+            transcriptPath = hookPayload.transcript_path
+          }
         }
       }
 
@@ -177,15 +204,23 @@ async function main() {
         process.exit(1)
       }
 
-      // Parse transcript into intermediate format
-      const parsed = await parseGeminiTranscript(transcriptPath, hookPayload)
+      try {
+        // Parse transcript into intermediate format
+        const parsed = await parseGeminiTranscript(transcriptPath, hookPayload ?? undefined)
 
-      // Map to VibeEvents
-      const events = await mapToVibeEvents(parsed, config)
+        // Map to VibeEvents
+        const events = await mapToVibeEvents(parsed, config)
 
-      // Store events
-      const { inserted, skipped } = insertEvents(events)
-      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+        // Store events
+        const { inserted, skipped } = insertEvents(events)
+        console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+      } catch {
+        // If running as a hook (stdin was provided), exit gracefully
+        if (!values.transcript) {
+          process.exit(0)
+        }
+        throw new Error('Failed to parse transcript')
+      }
     } else if (values.source === 'cursor') {
       let transcriptPath = values.transcript
       let hookPayload
@@ -195,7 +230,10 @@ async function main() {
         const stdin = await Bun.stdin.text()
         if (stdin.trim()) {
           hookPayload = await parseCursorHookPayload(stdin)
-          transcriptPath = hookPayload.transcript_path ?? undefined
+          // If parsing failed, try finding transcript another way
+          if (hookPayload) {
+            transcriptPath = hookPayload.transcript_path ?? undefined
+          }
         }
       }
 
@@ -209,15 +247,23 @@ async function main() {
         process.exit(1)
       }
 
-      // Parse transcript into intermediate format
-      const parsed = await parseCursorTranscript(transcriptPath, hookPayload)
+      try {
+        // Parse transcript into intermediate format
+        const parsed = await parseCursorTranscript(transcriptPath, hookPayload ?? undefined)
 
-      // Map to VibeEvents
-      const events = await mapToVibeEvents(parsed, config)
+        // Map to VibeEvents
+        const events = await mapToVibeEvents(parsed, config)
 
-      // Store events
-      const { inserted, skipped } = insertEvents(events)
-      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+        // Store events
+        const { inserted, skipped } = insertEvents(events)
+        console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+      } catch {
+        // If running as a hook (stdin was provided), exit gracefully
+        if (!values.transcript) {
+          process.exit(0)
+        }
+        throw new Error('Failed to parse transcript')
+      }
     } else {
       console.error(`Error: Source "${values.source}" not yet implemented`)
       process.exit(1)

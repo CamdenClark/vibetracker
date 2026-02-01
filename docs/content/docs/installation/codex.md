@@ -19,12 +19,6 @@ This adds the notify hook to `~/.codex/config.toml`.
 
 ## Manual Installation
 
-### Install the Package
-
-```bash
-bun add -g vibetracker
-```
-
 ### Configure Hooks
 
 Add the following to your `~/.codex/config.toml`:

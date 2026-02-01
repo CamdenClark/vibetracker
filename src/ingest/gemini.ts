@@ -160,8 +160,12 @@ function extractFileInfo(toolName: string, args: Record<string, unknown>): FileI
   }
 }
 
-export async function parseGeminiHookPayload(stdin: string): Promise<GeminiHookPayload> {
-  return JSON.parse(stdin)
+export async function parseGeminiHookPayload(stdin: string): Promise<GeminiHookPayload | null> {
+  try {
+    return JSON.parse(stdin)
+  } catch {
+    return null
+  }
 }
 
 export async function findGeminiTranscript(sessionId?: string): Promise<string | null> {
@@ -218,7 +222,17 @@ export async function parseGeminiTranscript(
   const content = await file.text()
 
   // Gemini uses a single JSON object, not JSONL
-  const transcript: GeminiTranscript = JSON.parse(content)
+  let transcript: GeminiTranscript
+  try {
+    transcript = JSON.parse(content)
+  } catch {
+    // Return empty transcript on parse failure
+    return {
+      source: 'gemini',
+      session_id: hookPayload?.session_id ?? '',
+      events: [],
+    }
+  }
 
   const events: ParsedEvent[] = []
   let turnIndex = 0

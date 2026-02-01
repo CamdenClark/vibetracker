@@ -66,14 +66,15 @@ describe('parseClaudeHookPayload', () => {
     })
 
     const payload = await parseClaudeHookPayload(stdin)
-    expect(payload.session_id).toBe('sess-123')
-    expect(payload.transcript_path).toBe('/path/to/transcript.jsonl')
-    expect(payload.cwd).toBe('/home/user/project')
-    expect(payload.hook_event_name).toBe('Stop')
+    expect(payload!.session_id).toBe('sess-123')
+    expect(payload!.transcript_path).toBe('/path/to/transcript.jsonl')
+    expect(payload!.cwd).toBe('/home/user/project')
+    expect(payload!.hook_event_name).toBe('Stop')
   })
 
-  test('throws on invalid JSON', async () => {
-    expect(parseClaudeHookPayload('not valid json')).rejects.toThrow()
+  test('returns null on invalid JSON', async () => {
+    const result = await parseClaudeHookPayload('not valid json')
+    expect(result).toBeNull()
   })
 })
 

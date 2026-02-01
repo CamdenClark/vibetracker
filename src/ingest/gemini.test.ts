@@ -18,14 +18,15 @@ describe('parseGeminiHookPayload', () => {
     })
 
     const payload = await parseGeminiHookPayload(stdin)
-    expect(payload.session_id).toBe('session-abc123')
-    expect(payload.transcript_path).toBe('/path/to/transcript.json')
-    expect(payload.cwd).toBe('/home/user/project')
-    expect(payload.hook_event_name).toBe('SessionEnd')
+    expect(payload!.session_id).toBe('session-abc123')
+    expect(payload!.transcript_path).toBe('/path/to/transcript.json')
+    expect(payload!.cwd).toBe('/home/user/project')
+    expect(payload!.hook_event_name).toBe('SessionEnd')
   })
 
-  test('throws on invalid JSON', async () => {
-    expect(parseGeminiHookPayload('not valid json')).rejects.toThrow()
+  test('returns null on invalid JSON', async () => {
+    const result = await parseGeminiHookPayload('not valid json')
+    expect(result).toBeNull()
   })
 })
 

@@ -149,8 +149,12 @@ function extractFileInfo(toolName: string, args: Record<string, unknown>): FileI
   }
 }
 
-export async function parseCodexHookPayload(stdin: string): Promise<CodexHookPayload> {
-  return JSON.parse(stdin)
+export async function parseCodexHookPayload(stdin: string): Promise<CodexHookPayload | null> {
+  try {
+    return JSON.parse(stdin)
+  } catch {
+    return null
+  }
 }
 
 export async function findCodexTranscript(sessionId?: string): Promise<string | null> {
@@ -270,7 +274,13 @@ export async function parseCodexTranscript(
   }
 
   for (const line of lines) {
-    const entry: CodexTranscriptEntry = JSON.parse(line)
+    let entry: CodexTranscriptEntry
+    try {
+      entry = JSON.parse(line)
+    } catch {
+      // Skip malformed lines
+      continue
+    }
 
     if (!entry.timestamp) continue
 
