@@ -1,0 +1,8 @@
+{
+  "name": "analysis",
+  "description": "Analysis tools for vibetracker data and development workflows",
+  "version": "0.1.0",
+  "author": {
+    "name": "Camden Clark"
+  }
+}

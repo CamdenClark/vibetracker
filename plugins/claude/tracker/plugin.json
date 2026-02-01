@@ -1,0 +1,8 @@
+{
+  "name": "tracker",
+  "description": "Capture Claude Code session events to your local vibetracker database",
+  "version": "0.1.0",
+  "author": {
+    "name": "Camden Clark"
+  }
+}

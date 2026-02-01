@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bunx vibetracker ingest --source claude",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bunx vibetracker ingest --source claude",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}
