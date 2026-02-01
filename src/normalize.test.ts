@@ -1,7 +1,6 @@
 import { test, expect, describe } from 'bun:test'
 import { normalizeToolName as normalizeClaudeToolName } from './ingest/claude'
 import { normalizeToolName as normalizeCodexToolName } from './ingest/codex'
-import { normalizeToolName as normalizeCursorToolName } from './ingest/cursor'
 import { normalizeToolName as normalizeGeminiToolName } from './ingest/gemini'
 
 describe('normalizeToolName', () => {
@@ -74,26 +73,6 @@ describe('normalizeToolName', () => {
     test('returns other for unknown tool names', () => {
       expect(normalizeCodexToolName('Bash')).toBe('other')
       expect(normalizeCodexToolName('UnknownTool')).toBe('other')
-    })
-  })
-
-  describe('cursor', () => {
-    test('normalizes Claude-style names', () => {
-      expect(normalizeCursorToolName('Bash')).toBe('bash')
-      expect(normalizeCursorToolName('Read')).toBe('file_read')
-      expect(normalizeCursorToolName('Write')).toBe('file_write')
-      expect(normalizeCursorToolName('Edit')).toBe('file_edit')
-    })
-
-    test('normalizes Cursor-specific names', () => {
-      expect(normalizeCursorToolName('read_file')).toBe('file_read')
-      expect(normalizeCursorToolName('write_file')).toBe('file_write')
-      expect(normalizeCursorToolName('run_terminal_command')).toBe('bash')
-      expect(normalizeCursorToolName('codebase_search')).toBe('grep')
-    })
-
-    test('returns other for unknown tool names', () => {
-      expect(normalizeCursorToolName('UnknownTool')).toBe('other')
     })
   })
 
