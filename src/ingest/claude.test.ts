@@ -290,6 +290,46 @@ describe('parseClaudeTranscript', () => {
     expect(toolCall!.file_lines_added).toBe(3)
   })
 
+  test('extracts bash command from Bash tool', async () => {
+    const transcriptPath = join(tempDir, 'bash-tool.jsonl')
+    const entries = [
+      {
+        type: 'user',
+        timestamp: '2024-01-15T10:00:00Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-1',
+        message: { role: 'user', content: 'Run a command' },
+      },
+      {
+        type: 'assistant',
+        timestamp: '2024-01-15T10:00:01Z',
+        sessionId: 'sess-abc',
+        uuid: 'uuid-2',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'text', text: 'Let me run that command.' },
+            {
+              type: 'tool_use',
+              name: 'Bash',
+              input: {
+                command: 'git status',
+                description: 'Check git status',
+              },
+            },
+          ],
+        },
+      },
+    ]
+    await Bun.write(transcriptPath, entries.map((e) => JSON.stringify(e)).join('\n'))
+
+    const result = await parseClaudeTranscript(transcriptPath)
+    const toolCall = result.events.find((e) => e.event_type === 'tool_call')
+    expect(toolCall).toBeDefined()
+    expect(toolCall!.tool_name_raw).toBe('Bash')
+    expect(toolCall!.bash_command).toBe('git status')
+  })
+
   test('extracts file info from Edit tool', async () => {
     const transcriptPath = join(tempDir, 'edit-tool.jsonl')
     const entries = [
