@@ -86,6 +86,20 @@ interface FileInfo {
   file_lines_removed?: number
 }
 
+interface BashInfo {
+  bash_command?: string
+  bash_command_output?: string
+}
+
+function extractBashInfo(toolName: string, args: Record<string, unknown>): BashInfo {
+  if (toolName !== 'shell_command') return {}
+
+  const command = args.command
+  return {
+    bash_command: typeof command === 'string' ? command : undefined,
+  }
+}
+
 function countLines(text: string): number {
   if (!text) return 0
   return text.split('\n').length
@@ -222,11 +236,13 @@ export async function parseCodexTranscript(
   let currentTurnTimestamp: string | undefined
   let currentTurnInputTokens = 0
   let currentTurnOutputTokens = 0
-  let currentTurnToolCalls: Array<{ name: string; args: Record<string, unknown>; fileInfo: FileInfo; timestamp: string }> = []
+  let currentTurnToolCalls: Array<{ name: string; args: Record<string, unknown>; fileInfo: FileInfo; bashInfo: BashInfo; timestamp: string; callId: string }> = []
   let hasPendingAssistantMessage = false
 
   // Track function calls awaiting output by call_id
   const pendingFunctionCalls = new Map<string, { name: string; args: Record<string, unknown> }>()
+  // Track bash outputs by call_id
+  const bashOutputs = new Map<string, string>()
 
   const flushTurn = () => {
     if (currentTurnTimestamp && sessionId && hasPendingAssistantMessage) {
@@ -247,6 +263,8 @@ export async function parseCodexTranscript(
 
       // Add tool calls for this turn
       for (const tool of currentTurnToolCalls) {
+        // Check if we have bash output for this call
+        const bashOutput = bashOutputs.get(tool.callId)
         events.push(createParsedEvent({
           timestamp: tool.timestamp,
           session_id: sessionId,
@@ -262,6 +280,8 @@ export async function parseCodexTranscript(
           cwd: sessionCwd,
           git_branch: sessionGitBranch,
           git_repo: sessionGitRepo,
+          bash_command: tool.bashInfo.bash_command,
+          bash_command_output: bashOutput ?? tool.bashInfo.bash_command_output,
         }))
       }
     }
@@ -353,12 +373,17 @@ export async function parseCodexTranscript(
         pendingFunctionCalls.set(callId, { name, args })
 
         const fileInfo = extractFileInfo(name, args)
-        currentTurnToolCalls.push({ name, args, fileInfo, timestamp: entry.timestamp })
+        const bashInfo = extractBashInfo(name, args)
+        currentTurnToolCalls.push({ name, args, fileInfo, bashInfo, timestamp: entry.timestamp, callId })
         currentTurnTimestamp = entry.timestamp
         hasPendingAssistantMessage = true
       } else if (item.payload.type === 'function_call_output') {
-        // Tool output received - can update file info if needed
+        // Tool output received - capture bash output if this was a shell_command
         const callId = item.payload.call_id ?? ''
+        const pendingCall = pendingFunctionCalls.get(callId)
+        if (pendingCall?.name === 'shell_command' && item.payload.output) {
+          bashOutputs.set(callId, item.payload.output)
+        }
         pendingFunctionCalls.delete(callId)
       } else if (item.payload.type === 'message' && item.payload.role === 'assistant') {
         hasPendingAssistantMessage = true
@@ -421,6 +446,8 @@ function createParsedEvent(params: {
   file_lines_added?: number
   file_lines_removed?: number
   prompt_text?: string
+  bash_command?: string
+  bash_command_output?: string
 }): ParsedEvent {
   return {
     timestamp: params.timestamp,
@@ -441,6 +468,8 @@ function createParsedEvent(params: {
     file_lines_added: params.file_lines_added,
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
+    bash_command: params.bash_command,
+    bash_command_output: params.bash_command_output,
   }
 }
 

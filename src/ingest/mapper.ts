@@ -49,6 +49,9 @@ function mapEventToVibeEvent(
     file_lines_added: event.file_lines_added,
     file_lines_removed: event.file_lines_removed,
 
+    bash_command: event.bash_command,
+    bash_command_output: event.bash_command_output,
+
     prompt_text: event.prompt_text,
 
     agent_id: event.agent_id,
