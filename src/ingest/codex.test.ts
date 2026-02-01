@@ -21,8 +21,9 @@ describe('parseCodexHookPayload', () => {
     expect(payload.cwd).toBe('/home/user/project')
   })
 
-  test('throws on invalid JSON', async () => {
-    expect(parseCodexHookPayload('not valid json')).rejects.toThrow()
+  test('returns null on invalid JSON', async () => {
+    const result = await parseCodexHookPayload('not valid json')
+    expect(result).toBeNull()
   })
 })
 

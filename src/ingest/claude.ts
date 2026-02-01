@@ -104,8 +104,12 @@ function extractFileInfo(toolName: string, input: unknown): FileInfo {
   }
 }
 
-export async function parseClaudeHookPayload(stdin: string): Promise<ClaudePayload> {
-  return JSON.parse(stdin)
+export async function parseClaudeHookPayload(stdin: string): Promise<ClaudePayload | null> {
+  try {
+    return JSON.parse(stdin)
+  } catch {
+    return null
+  }
 }
 
 export async function parseClaudeTranscript(
@@ -169,7 +173,13 @@ export async function parseClaudeTranscript(
   }
 
   for (const line of lines) {
-    const entry: ClaudeTranscriptEntry = JSON.parse(line)
+    let entry: ClaudeTranscriptEntry
+    try {
+      entry = JSON.parse(line)
+    } catch {
+      // Skip malformed lines
+      continue
+    }
 
     // Skip non-message entries
     if (!entry.sessionId || !entry.timestamp) continue
@@ -315,7 +325,13 @@ export async function parseClaudeSubagentTranscript(
   let sessionGitBranch: string | undefined
 
   for (const line of lines) {
-    const entry: ClaudeTranscriptEntry = JSON.parse(line)
+    let entry: ClaudeTranscriptEntry
+    try {
+      entry = JSON.parse(line)
+    } catch {
+      // Skip malformed lines
+      continue
+    }
 
     // Skip non-message entries
     if (!entry.timestamp) continue
@@ -423,7 +439,13 @@ async function extractAgentTypeFromParentTranscript(
     const lines = content.trim().split('\n').filter(Boolean)
 
     for (const line of lines) {
-      const entry: ClaudeTranscriptEntry = JSON.parse(line)
+      let entry: ClaudeTranscriptEntry
+      try {
+        entry = JSON.parse(line)
+      } catch {
+        // Skip malformed lines
+        continue
+      }
 
       if (entry.type !== 'assistant' || entry.message?.role !== 'assistant') continue
 
