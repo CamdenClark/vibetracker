@@ -29,3 +29,8 @@ Vibetracker works with multiple agentic coding tools:
 ## Quick Start
 
 {{< button relref="/docs/installation" >}}Get Started{{< /button >}}
+
+## Reference
+
+- [Event Schema]({{< relref "reference/event-schema" >}}) - Complete documentation of all event fields
+- [Querying Events]({{< relref "reference/querying" >}}) - SQL queries to analyze your data
