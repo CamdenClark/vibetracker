@@ -63,9 +63,16 @@ Add hooks to your `~/.gemini/settings.json`:
 ```json
 {
   "hooks": {
-    "post_message": [
+    "AfterAgent": [
       {
-        "command": "bunx vibetracker ingest --source gemini"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bunx vibetracker ingest --source gemini",
+            "name": "vibetracker",
+            "timeout": 30000
+          }
+        ]
       }
     ]
   }
@@ -74,15 +81,9 @@ Add hooks to your `~/.gemini/settings.json`:
 
 ### Codex
 
-Add hooks to your `~/.codex/config.json`:
-```json
-{
-  "hooks": {
-    "on_response": {
-      "command": "bunx vibetracker ingest --source codex"
-    }
-  }
-}
+Add the notify hook to your `~/.codex/config.toml`:
+```toml
+notify = ["bunx", "vibetracker", "ingest", "--source", "codex"]
 ```
 
 ## Usage
