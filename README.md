@@ -4,36 +4,12 @@ Analytics for agentic coding sessions. Track tokens, tools, errors, and more acr
 
 ## Prerequisites
 
-### Install Bun
-
-vibetracker requires [Bun](https://bun.sh) as its runtime. Install it using one of these methods:
-
-**macOS, Linux, or WSL:**
+vibetracker requires [Bun](https://bun.sh). Install it:
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-**Using npm:**
-```bash
-npm install -g bun
-```
-
-**Using Homebrew (macOS):**
-```bash
-brew install oven-sh/bun/bun
-```
-
-After installation, verify it's working:
-```bash
-bun --version
-```
-
 ## Installation
-
-Install the package globally:
-```bash
-bun add -g vibetracker
-```
 
 ### Claude
 
