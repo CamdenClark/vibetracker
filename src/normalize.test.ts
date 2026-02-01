@@ -54,10 +54,29 @@ describe('normalizeToolName', () => {
     })
   })
 
+  describe('cursor source', () => {
+    test('normalizes Claude-style names', () => {
+      expect(normalizeToolName('Bash', 'cursor')).toBe('bash')
+      expect(normalizeToolName('Read', 'cursor')).toBe('file_read')
+      expect(normalizeToolName('Write', 'cursor')).toBe('file_write')
+      expect(normalizeToolName('Edit', 'cursor')).toBe('file_edit')
+    })
+
+    test('normalizes Cursor-specific names', () => {
+      expect(normalizeToolName('read_file', 'cursor')).toBe('file_read')
+      expect(normalizeToolName('write_file', 'cursor')).toBe('file_write')
+      expect(normalizeToolName('run_terminal_command', 'cursor')).toBe('bash')
+      expect(normalizeToolName('codebase_search', 'cursor')).toBe('grep')
+    })
+
+    test('returns other for unknown tool names', () => {
+      expect(normalizeToolName('UnknownTool', 'cursor')).toBe('other')
+    })
+  })
+
   describe('other sources', () => {
-    test('returns other for non-claude_code sources', () => {
+    test('returns other for unsupported sources', () => {
       expect(normalizeToolName('Bash', 'codex')).toBe('other')
-      expect(normalizeToolName('Read', 'cursor')).toBe('other')
       expect(normalizeToolName('Write', 'opencode')).toBe('other')
       expect(normalizeToolName('Anything', 'other')).toBe('other')
     })

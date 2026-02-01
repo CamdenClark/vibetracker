@@ -19,6 +19,11 @@ import {
   parseGeminiHookPayload,
   findGeminiTranscript
 } from './ingest/gemini'
+import {
+  parseCursorTranscript,
+  parseCursorHookPayload,
+  findCursorTranscript
+} from './ingest/cursor'
 import { mapToVibeEvents } from './ingest/mapper'
 import { installSource } from './install'
 
@@ -174,6 +179,38 @@ async function main() {
 
       // Parse transcript into intermediate format
       const parsed = await parseGeminiTranscript(transcriptPath, hookPayload)
+
+      // Map to VibeEvents
+      const events = await mapToVibeEvents(parsed, config)
+
+      // Store events
+      const { inserted, skipped } = insertEvents(events)
+      console.log(`Ingested ${inserted} events (${skipped} duplicates skipped)`)
+    } else if (values.source === 'cursor') {
+      let transcriptPath = values.transcript
+      let hookPayload
+
+      // If no transcript path, try reading hook payload from stdin
+      if (!transcriptPath) {
+        const stdin = await Bun.stdin.text()
+        if (stdin.trim()) {
+          hookPayload = await parseCursorHookPayload(stdin)
+          transcriptPath = hookPayload.transcript_path ?? undefined
+        }
+      }
+
+      // If still no transcript, try to find the most recent one
+      if (!transcriptPath) {
+        transcriptPath = await findCursorTranscript() ?? undefined
+      }
+
+      if (!transcriptPath) {
+        console.error('Error: No transcript path. Provide --transcript or pipe hook payload to stdin')
+        process.exit(1)
+      }
+
+      // Parse transcript into intermediate format
+      const parsed = await parseCursorTranscript(transcriptPath, hookPayload)
 
       // Map to VibeEvents
       const events = await mapToVibeEvents(parsed, config)
