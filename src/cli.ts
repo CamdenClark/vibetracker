@@ -41,13 +41,13 @@ const command = positionals[0]
 
 if (values.help || !command) {
   console.log(`
-vibe-tracker - Track agentic coding sessions
+vibetracker - Track agentic coding sessions
 
 Usage:
-  vibe-tracker install --source <source>
-  vibe-tracker ingest --source <source> [--transcript <path>]
-  vibe-tracker status
-  vibe-tracker query <sql>
+  vibetracker install --source <source>
+  vibetracker ingest --source <source> [--transcript <path>]
+  vibetracker status
+  vibetracker query <sql>
 
 Commands:
   install   Configure automatic ingestion for an agent
