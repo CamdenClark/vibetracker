@@ -81,6 +81,28 @@ interface FileInfo {
   file_lines_removed?: number
 }
 
+interface BashInfo {
+  bash_command?: string
+  bash_command_output?: string
+}
+
+function extractBashInfo(toolName: string, args: Record<string, unknown>, result?: Array<{ functionResponse: { output: string } }>): BashInfo {
+  if (toolName !== 'run_shell_command') return {}
+
+  const command = args.command
+  let output: string | undefined
+
+  // Extract output from tool result if available
+  if (result && result.length > 0 && result[0]?.functionResponse?.output) {
+    output = result[0].functionResponse.output
+  }
+
+  return {
+    bash_command: typeof command === 'string' ? command : undefined,
+    bash_command_output: output,
+  }
+}
+
 function countLines(text: string): number {
   if (!text) return 0
   return text.split('\n').length
@@ -282,6 +304,7 @@ export async function parseGeminiTranscript(
       if (message.toolCalls) {
         for (const toolCall of message.toolCalls) {
           const fileInfo = extractFileInfo(toolCall.name, toolCall.args)
+          const bashInfo = extractBashInfo(toolCall.name, toolCall.args, toolCall.result)
           events.push(createParsedEvent({
             timestamp: toolCall.timestamp || message.timestamp,
             session_id: sessionId,
@@ -295,6 +318,8 @@ export async function parseGeminiTranscript(
             file_lines_added: fileInfo.file_lines_added,
             file_lines_removed: fileInfo.file_lines_removed,
             cwd: sessionCwd,
+            bash_command: bashInfo.bash_command,
+            bash_command_output: bashInfo.bash_command_output,
           }))
         }
       }
@@ -356,6 +381,8 @@ function createParsedEvent(params: {
   file_lines_added?: number
   file_lines_removed?: number
   prompt_text?: string
+  bash_command?: string
+  bash_command_output?: string
 }): ParsedEvent {
   return {
     timestamp: params.timestamp,
@@ -375,6 +402,8 @@ function createParsedEvent(params: {
     file_lines_added: params.file_lines_added,
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
+    bash_command: params.bash_command,
+    bash_command_output: params.bash_command_output,
   }
 }
 

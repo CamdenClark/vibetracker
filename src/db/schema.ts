@@ -36,6 +36,9 @@ export const events = sqliteTable('events', {
   file_lines_added: integer('file_lines_added'),
   file_lines_removed: integer('file_lines_removed'),
 
+  bash_command: text('bash_command'),
+  bash_command_output: text('bash_command_output'),
+
   error_message: text('error_message'),
   error_code: text('error_code'),
 

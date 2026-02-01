@@ -29,6 +29,10 @@ export interface ParsedEvent {
   file_lines_added?: number
   file_lines_removed?: number
 
+  // Bash command data
+  bash_command?: string
+  bash_command_output?: string
+
   // Prompt data
   prompt_text?: string
 
