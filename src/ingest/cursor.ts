@@ -42,6 +42,25 @@ interface FileInfo {
   file_lines_removed?: number
 }
 
+interface BashInfo {
+  bash_command?: string
+  bash_command_output?: string
+}
+
+function extractBashInfo(toolName: string, input: unknown): BashInfo {
+  // Cursor uses multiple tool names for bash: Bash, terminal, run_terminal_command
+  const bashTools = ['Bash', 'terminal', 'run_terminal_command']
+  if (!bashTools.includes(toolName)) return {}
+  if (!input || typeof input !== 'object') return {}
+
+  const inputObj = input as Record<string, unknown>
+  const command = inputObj.command
+
+  return {
+    bash_command: typeof command === 'string' ? command : undefined,
+  }
+}
+
 function countLines(text: string): number {
   if (!text) return 0
   return text.split('\n').length
@@ -158,7 +177,7 @@ export async function parseCursorTranscript(
   let currentTurnInputTokens = 0
   let currentTurnModel: string | undefined = hookPayload?.model
   let currentTurnTimestamp: string | undefined
-  let currentTurnToolCalls: Array<{ name: string; input: unknown; fileInfo: FileInfo }> = []
+  let currentTurnToolCalls: Array<{ name: string; input: unknown; fileInfo: FileInfo; bashInfo: BashInfo }> = []
 
   const flushTurn = () => {
     if (currentTurnTimestamp && sessionId) {
@@ -185,6 +204,8 @@ export async function parseCursorTranscript(
           file_action: tool.fileInfo.file_action,
           file_lines_added: tool.fileInfo.file_lines_added,
           file_lines_removed: tool.fileInfo.file_lines_removed,
+          bash_command: tool.bashInfo.bash_command,
+          bash_command_output: tool.bashInfo.bash_command_output,
         }))
       }
     }
@@ -258,7 +279,8 @@ export async function parseCursorTranscript(
           if (block && typeof block === 'object' && 'type' in block && block.type === 'tool_use') {
             const toolBlock = block as { type: 'tool_use'; name: string; input: unknown }
             const fileInfo = extractFileInfo(toolBlock.name, toolBlock.input)
-            currentTurnToolCalls.push({ name: toolBlock.name, input: toolBlock.input, fileInfo })
+            const bashInfo = extractBashInfo(toolBlock.name, toolBlock.input)
+            currentTurnToolCalls.push({ name: toolBlock.name, input: toolBlock.input, fileInfo, bashInfo })
           }
         }
       }
@@ -293,6 +315,8 @@ function createParsedEvent(params: {
   file_lines_added?: number
   file_lines_removed?: number
   prompt_text?: string
+  bash_command?: string
+  bash_command_output?: string
 }): ParsedEvent {
   return {
     timestamp: params.timestamp,
@@ -312,6 +336,8 @@ function createParsedEvent(params: {
     file_lines_added: params.file_lines_added,
     file_lines_removed: params.file_lines_removed,
     prompt_text: params.prompt_text,
+    bash_command: params.bash_command,
+    bash_command_output: params.bash_command_output,
   }
 }
 

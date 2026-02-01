@@ -66,6 +66,9 @@ export interface VibeEvent {
   file_lines_added?: number
   file_lines_removed?: number
 
+  bash_command?: string
+  bash_command_output?: string
+
   error_message?: string
   error_code?: string
 
