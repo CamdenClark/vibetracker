@@ -109,3 +109,7 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+
+## Documentation
+
+When making changes to the codebase, update any relevant documentation pages to reflect those changes. This includes README files, API docs, and any other documentation that describes the modified functionality.
