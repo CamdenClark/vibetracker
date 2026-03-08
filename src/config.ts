@@ -84,7 +84,7 @@ async function getGitEmail(): Promise<string | null> {
   }
 }
 
-function toS3Safe(name: string): string {
+export function toS3Safe(name: string): string {
   // S3 keys: lowercase alphanumeric, hyphens, underscores
   return name
     .toLowerCase()
